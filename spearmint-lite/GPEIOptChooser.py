@@ -24,14 +24,22 @@ import gp
 import sys
 import util
 import tempfile
+import copy
 import numpy          as np
 import numpy.random   as npr
 import scipy.linalg   as spla
 import scipy.stats    as sps
 import scipy.optimize as spo
 import cPickle
+import multiprocessing
 
 from Locker import *
+
+def optimize_pt(c, b, comp, pend, vals, model):
+    ret = spo.fmin_l_bfgs_b(model.grad_optimize_ei_over_hypers,
+                            c.flatten(), args=(comp, pend, vals),
+                            bounds=b, disp=0)
+    return ret[0]
 
 def init(expt_dir, arg_string):
     args = util.unpack_args(arg_string)
@@ -56,7 +64,7 @@ class GPEIOptChooser:
         self.mcmc_iters      = int(mcmc_iters)
         self.burnin          = int(burnin)
         self.needs_burnin    = True
-        self.pending_samples = pending_samples
+        self.pending_samples = int(pending_samples)
         self.D               = -1
         self.hyper_iters     = 1
         # Number of points to optimize EI over
@@ -112,6 +120,7 @@ class GPEIOptChooser:
         self.locker.lock_wait(self.state_pkl)
         sys.stderr.write("...acquired\n")
 
+        self.randomstate = npr.get_state()
         if os.path.exists(self.state_pkl):
             fh    = open(self.state_pkl, 'r')
             state = cPickle.load(fh)
@@ -167,7 +176,7 @@ class GPEIOptChooser:
         # Perform the real initialization.
         if self.D == -1:
             self._real_init(grid.shape[1], values[complete])
-
+    
         # Grab out the relevant sets.
         comp = grid[complete,:]
         cand = grid[candidates,:]
@@ -201,28 +210,39 @@ class GPEIOptChooser:
                 sys.stderr.write("%d/%d] mean: %.2f  amp: %.2f  noise: %.4f "
                                  "min_ls: %.4f  max_ls: %.4f\n"
                                  % (mcmc_iter+1, self.mcmc_iters, self.mean,
-                                    np.sqrt(self.amp2), self.noise, 
-                                    np.min(self.ls), np.max(self.ls)))
+                                    np.sqrt(self.amp2), self.noise,
+                                    np.min(self.ls), np.max(self.ls)))            
             self.dump_hypers()
 
             b = []# optimization bounds
             for i in xrange(0, cand.shape[1]):
                 b.append((0, 1))
-            
+                    
             overall_ei = self.ei_over_hypers(comp,pend,cand2,vals)
             inds = np.argsort(np.mean(overall_ei,axis=1))[-self.grid_subset:]
             cand2 = cand2[inds,:]
 
-            for i in xrange(0, cand2.shape[0]):
-                sys.stderr.write("Optimizing candidate %d/%d\n" %
-                                 (i+1, cand2.shape[0]))
-                ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
-                                        cand2[i,:].flatten(), args=(comp,vals),
-                                        bounds=b, disp=0)
-                cand2[i,:] = ret[0]
+            # This is old code to optimize each point in parallel. Uncomment
+            # and replace if multiprocessing doesn't work
+            #for i in xrange(0, cand2.shape[0]):
+            #    sys.stderr.write("Optimizing candidate %d/%d\n" %
+            #                     (i+1, cand2.shape[0]))
+            #self.check_grad_ei(cand2[i,:].flatten(), comp, pend, vals)
+            #    ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
+            #                            cand2[i,:].flatten(), args=(comp,pend,vals),
+            #                            bounds=b, disp=0)
+            #    cand2[i,:] = ret[0]
 
-            cand = np.vstack((cand, cand2))
+            #cand = np.vstack((cand, cand2))
 
+            # Optimize each point in parallel
+            pool = multiprocessing.Pool(self.grid_subset)
+            results = [pool.apply_async(optimize_pt,args=(
+                        c,b,comp,pend,vals,copy.copy(self))) for c in cand2]
+            for res in results:
+                cand = np.vstack((cand, res.get()))                
+            pool.close()
+            
             overall_ei = self.ei_over_hypers(comp,pend,cand,vals)
             best_cand = np.argmax(np.mean(overall_ei, axis=1))
             
@@ -271,10 +291,26 @@ class GPEIOptChooser:
             self.ls = hyper[3]
             overall_ei[:,mcmc_iter] = self.compute_ei(comp, pend, cand,
                                                       vals)
-        return overall_ei.copy()
+        return overall_ei
+
+    def check_grad_ei(self, cand, comp, pend, vals):
+        (ei,dx1) = self.grad_optimize_ei_over_hypers(cand, comp, pend, vals)
+        dx2 = dx1*0
+        idx = np.zeros(cand.shape[0])
+        for i in xrange(0, cand.shape[0]):
+            idx[i] = 1e-6
+            (ei1,tmp) = self.grad_optimize_ei_over_hypers(cand + idx, comp, pend, vals)
+            (ei2,tmp) = self.grad_optimize_ei_over_hypers(cand - idx, comp, pend, vals)
+            dx2[i] = (ei - ei2)/(2*1e-6)
+            idx[i] = 0
+        print 'computed grads', dx1
+        print 'finite diffs', dx2
+        print (dx1/dx2)
+        print np.sum((dx1 - dx2)**2)
+        time.sleep(2)
 
     # Adjust points by optimizing EI over a set of hyperparameter samples
-    def grad_optimize_ei_over_hypers(self, cand, comp, vals, compute_grad=True):
+    def grad_optimize_ei_over_hypers(self, cand, comp, pend, vals, compute_grad=True):
         summed_ei = 0
         summed_grad_ei = np.zeros(cand.shape).flatten()
         ls = self.ls.copy()
@@ -288,10 +324,10 @@ class GPEIOptChooser:
             self.amp2 = hyper[2]
             self.ls = hyper[3]
             if compute_grad:
-                (ei,g_ei) = self.grad_optimize_ei(cand,comp,vals,compute_grad)
+                (ei,g_ei) = self.grad_optimize_ei(cand,comp,pend,vals,compute_grad)
                 summed_grad_ei = summed_grad_ei + g_ei
             else:
-                ei = self.grad_optimize_ei(cand,comp,vals,compute_grad)
+                ei = self.grad_optimize_ei(cand,comp,pend,vals,compute_grad)
             summed_ei += ei
 
         self.mean = mean
@@ -305,54 +341,137 @@ class GPEIOptChooser:
             return summed_ei
 
     # Adjust points based on optimizing their ei
-    def grad_optimize_ei(self, cand, comp, vals, compute_grad=True):
-        best = np.min(vals)
-        cand = np.reshape(cand, (-1, comp.shape[1]))
+    def grad_optimize_ei(self, cand, comp, pend, vals, compute_grad=True):
+        if pend.shape[0] == 0:
+            best = np.min(vals)
+            cand = np.reshape(cand, (-1, comp.shape[1]))
         
-        # The primary covariances for prediction.
-        comp_cov   = self.cov(comp)
-        cand_cross = self.cov(comp, cand)
+            # The primary covariances for prediction.
+            comp_cov   = self.cov(comp)
+            cand_cross = self.cov(comp, cand)
 
-        # Compute the required Cholesky.
-        obsv_cov  = comp_cov + self.noise*np.eye(comp.shape[0])
-        obsv_chol = spla.cholesky(obsv_cov, lower=True)
+            # Compute the required Cholesky.
+            obsv_cov  = comp_cov + self.noise*np.eye(comp.shape[0])
+            obsv_chol = spla.cholesky(obsv_cov, lower=True)
         
-        cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
-        cand_cross_grad = cov_grad_func(self.ls, comp, cand)
+            cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
+            cand_cross_grad = cov_grad_func(self.ls, comp, cand)
         
-        # Predictive things.
-        # Solve the linear systems.
-        alpha  = spla.cho_solve((obsv_chol, True), vals - self.mean)
-        beta   = spla.solve_triangular(obsv_chol, cand_cross, lower=True)
+            # Predictive things.
+            # Solve the linear systems.
+            alpha  = spla.cho_solve((obsv_chol, True), vals - self.mean)
+            beta   = spla.solve_triangular(obsv_chol, cand_cross, lower=True)
     
-        # Predict the marginal means and variances at candidates.
-        func_m = np.dot(cand_cross.T, alpha) + self.mean
-        func_v = self.amp2*(1+1e-6) - np.sum(beta**2, axis=0)
+            # Predict the marginal means and variances at candidates.
+            func_m = np.dot(cand_cross.T, alpha) + self.mean
+            func_v = self.amp2*(1+1e-6) - np.sum(beta**2, axis=0)
 
-        # Expected improvement
-        func_s = np.sqrt(func_v)
-        u      = (best - func_m) / func_s
-        ncdf   = sps.norm.cdf(u)
-        npdf   = sps.norm.pdf(u)
-        ei     = func_s*( u*ncdf + npdf)
+            # Expected improvement
+            func_s = np.sqrt(func_v)
+            u      = (best - func_m) / func_s
+            ncdf   = sps.norm.cdf(u)
+            npdf   = sps.norm.pdf(u)
+            ei     = func_s*( u*ncdf + npdf)
 
-        if not compute_grad:
-            return ei
+            if not compute_grad:
+                return ei
 
-        # Gradients of ei w.r.t. mean and variance
-        g_ei_m = -ncdf
-        g_ei_s2 = 0.5*npdf / func_s
-
-        # Apply covariance function
-        grad_cross = np.squeeze(cand_cross_grad)
+            # Gradients of ei w.r.t. mean and variance
+            g_ei_m = -ncdf
+            g_ei_s2 = 0.5*npdf / func_s
+            
+            # Apply covariance function
+            grad_cross = np.squeeze(cand_cross_grad)
         
-        grad_xp_m = np.dot(alpha.transpose(),grad_cross)
-        grad_xp_v = np.dot(-2*spla.cho_solve(
-                (obsv_chol, True),cand_cross).transpose(), grad_cross)
-        grad_xp = 0.5*self.amp2*(grad_xp_m*g_ei_m + grad_xp_v*g_ei_s2)
-        ei = -np.sum(ei)
+            grad_xp_m = np.dot(alpha.transpose(),grad_cross)
+            grad_xp_v = np.dot(-2*spla.cho_solve(
+                    (obsv_chol, True),cand_cross).transpose(), grad_cross)
+            
+            grad_xp = 0.5*self.amp2*(grad_xp_m*g_ei_m + grad_xp_v*g_ei_s2)
+            ei = -np.sum(ei)
 
-        return ei, grad_xp.flatten()
+            return ei, grad_xp.flatten()
+
+        else:
+            # If there are pending experiments, fantasize their outcomes.
+            cand = np.reshape(cand, (-1, comp.shape[1]))
+
+            # Create a composite vector of complete and pending.
+            comp_pend = np.concatenate((comp, pend))
+
+            # Compute the covariance and Cholesky decomposition.
+            comp_pend_cov  = (self.cov(comp_pend) + 
+                              self.noise*np.eye(comp_pend.shape[0]))
+            comp_pend_chol = spla.cholesky(comp_pend_cov, lower=True)
+
+            # Compute submatrices.
+            pend_cross = self.cov(comp, pend)
+            pend_kappa = self.cov(pend)
+
+            # Use the sub-Cholesky.
+            obsv_chol = comp_pend_chol[:comp.shape[0],:comp.shape[0]]
+
+            # Solve the linear systems.
+            alpha  = spla.cho_solve((obsv_chol, True), vals - self.mean)
+            beta   = spla.cho_solve((obsv_chol, True), pend_cross)
+
+            # Finding predictive means and variances.
+            pend_m = np.dot(pend_cross.T, alpha) + self.mean
+            pend_K = pend_kappa - np.dot(pend_cross.T, beta)
+
+            # Take the Cholesky of the predictive covariance.
+            pend_chol = spla.cholesky(pend_K, lower=True)
+
+            # Make predictions.
+            npr.set_state(self.randomstate)
+            pend_fant = np.dot(pend_chol, npr.randn(pend.shape[0],self.pending_samples)) + self.mean
+
+            # Include the fantasies.
+            fant_vals = np.concatenate(
+                (np.tile(vals[:,np.newaxis], 
+                         (1,self.pending_samples)), pend_fant))
+
+            # Compute bests over the fantasies.
+            bests = np.min(fant_vals, axis=0)
+
+            # Now generalize from these fantasies.
+            cand_cross = self.cov(comp_pend, cand)
+            cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
+            cand_cross_grad = cov_grad_func(self.ls, comp_pend, cand)
+
+            # Solve the linear systems.
+            alpha  = spla.cho_solve((comp_pend_chol, True), 
+                                    fant_vals - self.mean)
+            beta   = spla.solve_triangular(comp_pend_chol, cand_cross,
+                                           lower=True)
+
+            # Predict the marginal means and variances at candidates.
+            func_m = np.dot(cand_cross.T, alpha) + self.mean
+            func_v = self.amp2*(1+1e-6) - np.sum(beta**2, axis=0)
+
+            # Expected improvement
+            func_s = np.sqrt(func_v[:,np.newaxis])
+            u      = (bests[np.newaxis,:] - func_m) / func_s
+            ncdf   = sps.norm.cdf(u)
+            npdf   = sps.norm.pdf(u)
+            ei     = func_s*( u*ncdf + npdf)
+
+            # Gradients of ei w.r.t. mean and variance            
+            g_ei_m = -ncdf
+            g_ei_s2 = 0.5*npdf / func_s
+            
+            # Apply covariance function
+            grad_cross = np.squeeze(cand_cross_grad)
+        
+            grad_xp_m = np.dot(alpha.transpose(),grad_cross)
+            grad_xp_v = np.dot(-2*spla.cho_solve(
+                    (comp_pend_chol, True),cand_cross).transpose(), grad_cross)
+
+            grad_xp = 0.5*self.amp2*(grad_xp_m*np.tile(g_ei_m,(comp.shape[1],1)).T + (grad_xp_v.T*g_ei_s2).T)
+            ei = -np.mean(ei, axis=1)
+            grad_xp = np.mean(grad_xp,axis=0)
+
+            return ei, grad_xp.flatten()
 
     def compute_ei(self, comp, pend, cand, vals):        
         if pend.shape[0] == 0:
@@ -415,6 +534,7 @@ class GPEIOptChooser:
             pend_chol = spla.cholesky(pend_K, lower=True)
 
             # Make predictions.
+            npr.set_state(self.randomstate)
             pend_fant = np.dot(pend_chol, npr.randn(pend.shape[0],self.pending_samples)) + self.mean
 
             # Include the fantasies.
