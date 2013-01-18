@@ -1,0 +1,9 @@
+{
+"X" : {
+  "name":"X",
+  "type":"float",
+  "min":0,
+  "max":1,
+  "size":2
+}
+}

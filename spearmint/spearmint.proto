@@ -1,0 +1,54 @@
+message Job {
+
+ required uint64     id        = 1;
+ required string     expt_dir  = 2;
+ required string     name      = 3;
+ required Language   language  = 4;
+
+ optional string     status    = 5;
+ repeated Parameter  param     = 6;
+ optional uint64     submit_t  = 7;
+ optional uint64     start_t   = 8;
+ optional uint64     end_t     = 9;
+ optional double     value     = 10;
+ optional double     duration  = 11;
+
+}
+
+enum Language {
+ MATLAB = 1;
+ PYTHON = 2;
+ SHELL  = 3;
+ MCR    = 4;
+}
+
+message Parameter {
+ required string name    = 1;
+ repeated int64  int_val = 2;
+ repeated string str_val = 3;
+ repeated double dbl_val = 4;
+}
+
+message Experiment {
+
+ required Language      language  = 1;
+ required string        name      = 2;
+ repeated ParameterSpec variable  = 3;
+
+ message ParameterSpec {
+  required string name    = 1;
+  required uint32 size    = 2;
+  required Type   type    = 3;
+  repeated string options = 4;
+  optional double min     = 5;
+  optional double max     = 6;
+  
+  enum Type {
+   INT   = 1;
+   FLOAT = 2;
+   ENUM  = 3;
+  }
+
+ }
+
+}
