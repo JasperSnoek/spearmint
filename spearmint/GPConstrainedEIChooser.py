@@ -32,12 +32,21 @@ import scipy.stats    as sps
 import scipy.optimize as spo
 import cPickle
 import matplotlib.pyplot as plt
+import multiprocessing
+import copy
 
 from Locker import *
 
+# Wrapper function to pass to parallel ei optimization calls
+def optimize_pt(c, b, comp, pend, vals, labels, model):
+    ret = spo.fmin_l_bfgs_b(model.grad_optimize_ei_over_hypers,
+                            c.flatten(), args=(comp, pend, vals, labels),
+                            bounds=b, disp=0)
+    return ret[0]
+
 def init(expt_dir, arg_string):
     args = util.unpack_args(arg_string)
-    return GPEIConstrainedProbitChooser(expt_dir, **args)
+    return GPConstrainedEIChooser(expt_dir, **args)
 
 """
 Chooser module for Constrained Gaussian process expected improvement.
@@ -48,12 +57,12 @@ Gaussian process hyperparameters for two GPs, one over the objective
 function and the other a probit likelihood classification GP that estimates the
 probability that a point is outside of the constraint space.
 """
-class GPEIConstrainedProbitChooser:
+class GPConstrainedEIChooser:
 
     def __init__(self, expt_dir, covar="Matern52", mcmc_iters=20, 
                  pending_samples=100, noiseless=False, burnin=100,
                  grid_subset=20, constraint_violating_value=np.inf,
-                 visualize2D=False):
+                 verbosity=0, visualize2D=False):
         self.cov_func        = getattr(gp, covar)
         self.locker          = Locker()
         self.state_pkl       = os.path.join(expt_dir, self.__module__ + ".pkl")
@@ -73,6 +82,7 @@ class GPEIConstrainedProbitChooser:
         self.constraint_hyper_samples = []
         self.ff              = None
         self.ff_samples      = []
+        self.verbosity       = int(verbosity)
 
         self.noise_scale = 0.1  # horseshoe prior
         self.amp2_scale  = 1    # zero-mean log normal prior
@@ -136,6 +146,7 @@ class GPEIConstrainedProbitChooser:
         self.locker.lock_wait(self.state_pkl)
         sys.stderr.write("...acquired\n")
 
+        self.randomstate = npr.get_state()
         if os.path.exists(self.state_pkl):            
             fh    = open(self.state_pkl, 'r')
             state = cPickle.load(fh)
@@ -257,22 +268,25 @@ class GPEIConstrainedProbitChooser:
             for mcmc_iter in xrange(self.mcmc_iters):
                 self.sample_constraint_hypers(comp, labels)
                 self.sample_hypers(comp[goodvals,:], vals[goodvals])
-                sys.stderr.write("%d/%d] mean: %.2f  amp: %.2f  noise: %.4f "
-                                 "min_ls: %.4f  max_ls: %.4f\n"
-                                 % (mcmc_iter+1, self.mcmc_iters, self.mean,
-                                    np.sqrt(self.amp2), self.noise,
-                                    np.min(self.ls), np.max(self.ls)))
+                if self.verbosity > 0:
+                    sys.stderr.write("%d/%d] mean: %.2f  amp: %.2f noise: %.4f "
+                                     "min_ls: %.4f  max_ls: %.4f\n"
+                                     % (mcmc_iter+1, self.mcmc_iters, self.mean,
+                                        np.sqrt(self.amp2), self.noise,
+                                        np.min(self.ls), np.max(self.ls)))
 
-                sys.stderr.write("%d/%d] constraint_mean: %.2f "
-                                 "constraint_amp: %.2f  constraint_gain: %.4f "
-                                 "constraint_min_ls: %.4f  constraint_max_ls: "
-                                 "%.4f\n"
-                                 % (mcmc_iter+1, self.mcmc_iters, 
-                                    self.constraint_mean,
-                                    np.sqrt(self.constraint_amp2), 
-                                    self.constraint_gain,
-                                    np.min(self.constraint_ls), 
-                                    np.max(self.constraint_ls)))
+                    sys.stderr.write("%d/%d] constraint_mean: %.2f "
+                                     "constraint_amp: %.2f "
+                                     "constraint_gain: %.4f "
+                                     "constraint_min_ls: %.4f "
+                                     "constraint_max_ls: "
+                                     "%.4f\n"
+                                     % (mcmc_iter+1, self.mcmc_iters, 
+                                        self.constraint_mean,
+                                        np.sqrt(self.constraint_amp2), 
+                                        self.constraint_gain,
+                                        np.min(self.constraint_ls), 
+                                        np.max(self.constraint_ls)))
             self.dump_hypers()
             comp_preds = np.zeros(labels.shape[0]).flatten()
             
@@ -287,11 +301,12 @@ class GPEIConstrainedProbitChooser:
                 comp_preds += self.pred_constraint_voilation(comp, comp, 
                                                              labels).flatten()
             comp_preds = comp_preds / float(self.mcmc_iters)
-            print 'Prediction %f percent constraint violations (%d/%d): ' % (
-            np.mean(preds < 0.5), np.sum(preds < 0.5), preds.shape[0])
-            print 'Prediction %f percent train accuracy (%d/%d): ' % (
-            np.mean((comp_preds > 0.5) == labels), np.sum((comp_preds > 0.5) 
-                    == labels), comp_preds.shape[0])
+            print 'Predicting %.2f%% constraint violations (%d/%d): ' % (
+            np.mean(preds < 0.5)*100, np.sum(preds < 0.5), preds.shape[0])
+            if self.verbosity > 0:
+                print 'Prediction` %f%% train accuracy (%d/%d): ' % (
+                    np.mean((comp_preds > 0.5) == labels), 
+                    np.sum((comp_preds > 0.5) == labels), comp_preds.shape[0])
 
             if self.visualize2D:
                 delta = 0.025
@@ -375,15 +390,23 @@ class GPEIConstrainedProbitChooser:
             for i in xrange(0, cand.shape[1]):
                 b.append((0, 1))
                 
-            for i in xrange(0, cand2.shape[0]):
-                sys.stderr.write("Optimizing candidate %d/%d\n" %
-                                 (i+1, cand2.shape[0]))
-                #self.check_grad_ei_per(cand2[i,:], comp, vals, labels)
-                ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
-                                        cand2[i,:].flatten(),
-                                        args=(comp,vals,labels,True),
-                                        bounds=b, disp=0)
-                cand2[i,:] = ret[0]
+            # Optimize each point in parallel
+            pool = multiprocessing.Pool(self.grid_subset)
+            results = [pool.apply_async(optimize_pt,args=(
+                        c,b,comp,pend,vals,labels, copy.copy(self))) for c in cand2]            
+            for res in results:
+                cand = np.vstack((cand, res.get(1024)))
+            pool.close()
+
+            #for i in xrange(0, cand2.shape[0]):
+            #    sys.stderr.write("Optimizing candidate %d/%d\n" %
+            #                     (i+1, cand2.shape[0]))
+            #    self.check_grad_ei(cand2[i,:], comp, pend, vals, labels)
+            #    ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
+            #                            cand2[i,:].flatten(),
+            #                            args=(comp,pend,vals,labels,True),
+            #                            bounds=b, disp=0)
+            #    cand2[i,:] = ret[0]
 
             cand = np.vstack((cand, cand2))
 
@@ -448,11 +471,11 @@ class GPEIConstrainedProbitChooser:
         return overall_ei
 
     # Adjust points by optimizing EI over a set of hyperparameter samples
-    def grad_optimize_ei_over_hypers(self, cand, comp, vals, labels, 
+    def grad_optimize_ei_over_hypers(self, cand, comp, pend, vals, labels, 
                                      compute_grad=True):
         summed_ei = 0
         summed_grad_ei = np.zeros(cand.shape).flatten()
-
+        
         for mcmc_iter in xrange(self.mcmc_iters):
             hyper = self.hyper_samples[mcmc_iter]
             constraint_hyper = self.constraint_hyper_samples[mcmc_iter]
@@ -465,13 +488,13 @@ class GPEIConstrainedProbitChooser:
             self.constraint_gain = constraint_hyper[1]
             self.constraint_amp2 = constraint_hyper[2]
             self.constraint_ls = constraint_hyper[3]
-
             if compute_grad:
-                (ei,g_ei) = self.grad_optimize_ei(cand,comp,vals,labels,
+                (ei,g_ei) = self.grad_optimize_ei(cand, comp, pend, vals, labels,
                                                   compute_grad)
                 summed_grad_ei = summed_grad_ei + g_ei
             else:
-                ei = self.grad_optimize_ei(cand,comp,vals,labels,compute_grad)
+                ei = self.grad_optimize_ei(cand, comp, pend, vals, 
+                                           labels, compute_grad)
                 
             summed_ei += ei
 
@@ -480,16 +503,16 @@ class GPEIConstrainedProbitChooser:
         else:
             return summed_ei
 
-    def check_grad_ei(self, cand, comp, vals, labels):
-        (ei,dx1) = self.grad_optimize_ei_over_hypers(cand, comp, vals, labels)
+    def check_grad_ei(self, cand, comp, pend, vals, labels):
+        (ei,dx1) = self.grad_optimize_ei_over_hypers(cand, comp, pend, vals, labels)
         dx2 = dx1*0
         idx = np.zeros(cand.shape[0])
         for i in xrange(0, cand.shape[0]):
             idx[i] = 1e-6
             (ei1,tmp) = self.grad_optimize_ei_over_hypers(
-                cand + idx, comp, vals, labels)
+                cand + idx, comp, pend, vals, labels)
             (ei2,tmp) = self.grad_optimize_ei_over_hypers(
-                cand - idx, comp, vals, labels)
+                cand - idx, comp, pend, vals, labels)
             dx2[i] = (ei - ei2)/(2*1e-6)
             idx[i] = 0
         print 'computed grads', dx1
@@ -498,7 +521,15 @@ class GPEIConstrainedProbitChooser:
         print np.sum((dx1 - dx2)**2)
         time.sleep(2)
 
-    def grad_optimize_ei(self, cand, comp, vals, labels, compute_grad=True):
+    def grad_optimize_ei(self, cand, comp, pend, vals, labels, compute_grad=True):        
+        if pend.shape[0] == 0:            
+            return self.grad_optimize_ei_nopend(cand, comp, vals, labels, 
+                                                compute_grad=True)
+        else:
+            return self.grad_optimize_ei_pend(cand, comp, pend, vals, labels, 
+                                              compute_grad=True)
+
+    def grad_optimize_ei_pend(self, cand, comp, pend, vals, labels, compute_grad=True):
         # Here we have to compute the gradients for constrained ei
         # This means deriving through the two kernels, the one for predicting
         # constraint violations and the one predicting ei
@@ -508,7 +539,7 @@ class GPEIConstrainedProbitChooser:
         comp = comp[labels > 0, :]
         vals = vals[labels > 0]
 
-        # Use standard EI if there aren't enough observations of either 
+        # Use standard EI if there aren't enough observations of either
         # positive or negative constraint violations
         use_vanilla_ei = (np.all(labels > 0) or np.all(labels <= 0))
 
@@ -519,7 +550,7 @@ class GPEIConstrainedProbitChooser:
         if (not use_vanilla_ei):
 
             # First we make predictions for the durations
-            # Compute covariances        
+            # Compute covariances
             comp_constraint_cov   = self.cov(self.constraint_amp2,
                                              self.constraint_ls,
                                              compfull)
@@ -541,10 +572,10 @@ class GPEIConstrainedProbitChooser:
             # Squash through Gaussian cdf
             func_constraint_m = sps.norm.cdf(self.constraint_gain*ff)
 
-        # Apply covariance function
-        cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
-        cand_cross_grad = cov_grad_func(self.constraint_ls, compfull, cand)
-        grad_cross_t = np.squeeze(cand_cross_grad)
+            # Apply covariance function
+            cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
+            cand_cross_grad = cov_grad_func(self.constraint_ls, compfull, cand)
+            grad_cross_t = np.squeeze(cand_cross_grad)
 
         # Now compute the gradients w.r.t. ei
         # The primary covariances for prediction.
@@ -553,17 +584,68 @@ class GPEIConstrainedProbitChooser:
         comp_cov_full   = self.cov(self.amp2, self.ls, compfull)
         cand_cross_full = self.cov(self.amp2, self.ls, compfull, cand)
 
+        # Create a composite vector of complete and pending.
+        comp_pend = np.concatenate((comp, pend))
+
+        # Compute the covariance and Cholesky decomposition.
+        comp_pend_cov  = (self.cov(self.amp2, self.ls, comp_pend) +
+                          self.noise*np.eye(comp_pend.shape[0]))
+        comp_pend_chol = spla.cholesky(comp_pend_cov, lower=True)
+
+        # Compute submatrices.
+        pend_cross = self.cov(self.amp2, self.ls, comp, pend)
+        pend_kappa = self.cov(self.amp2,self.ls, pend)
+
+        # Use the sub-Cholesky.
+        obsv_chol = comp_pend_chol[:comp.shape[0],:comp.shape[0]]
+
         # Compute the required Cholesky.
-        obsv_cov  = comp_cov + self.noise*np.eye(comp.shape[0])
-        obsv_chol = spla.cholesky(obsv_cov, lower=True)
+        #obsv_cov  = comp_cov + self.noise*np.eye(comp.shape[0])
+        #obsv_chol = spla.cholesky(obsv_cov, lower=True)
         obsv_cov_full  = comp_cov_full + self.noise*np.eye(compfull.shape[0])
         obsv_chol_full = spla.cholesky( obsv_cov_full, lower=True)
 
         # Predictive things.
         # Solve the linear systems.
         alpha  = spla.cho_solve((obsv_chol, True), vals - self.mean)
-        beta   = spla.solve_triangular(obsv_chol_full, cand_cross_full, 
+        beta   = spla.cho_solve((obsv_chol, True), pend_cross)
+
+        # Finding predictive means and variances.
+        pend_m = np.dot(pend_cross.T, alpha) + self.mean
+        pend_K = pend_kappa - np.dot(pend_cross.T, beta)
+
+        # Take the Cholesky of the predictive covariance.
+        pend_chol = spla.cholesky(pend_K, lower=True)
+
+        # Make predictions.
+        npr.set_state(self.randomstate)
+        pend_fant = np.dot(pend_chol, npr.randn(pend.shape[0],self.pending_samples)) + self.mean
+
+        # Include the fantasies.
+        fant_vals = np.concatenate(
+            (np.tile(vals[:,np.newaxis],
+                     (1,self.pending_samples)), pend_fant))
+
+        # Compute bests over the fantasies.
+        bests = np.min(fant_vals, axis=0)
+
+        # Now generalize from these fantasies.
+        cand_cross = self.cov(self.amp2, self.ls, comp_pend, cand)
+        cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
+        cand_cross_grad = cov_grad_func(self.ls, comp_pend, cand)
+
+        # Solve the linear systems.
+        alpha  = spla.cho_solve((comp_pend_chol, True),
+                                fant_vals - self.mean)
+        beta   = spla.solve_triangular(comp_pend_chol, cand_cross,
                                        lower=True)
+
+        # Predict the marginal means and variances at candidates.
+        func_m = np.dot(cand_cross.T, alpha) + self.mean
+        func_v = self.amp2*(1+1e-6) - np.sum(beta**2, axis=0)
+
+        #beta  = spla.solve_triangular(obsv_chol_full, cand_cross_full, 
+        #                               lower=True)
         #beta   = spla.solve_triangular(obsv_chol, cand_cross, 
         #                               lower=True)
 
@@ -586,22 +668,16 @@ class GPEIConstrainedProbitChooser:
         g_ei_m = -ncdf
         g_ei_s2 = 0.5*npdf / func_s
 
-        # Apply covariance function
-        cand_cross_grad = cov_grad_func(self.ls, comp, cand)
+        # Apply covariance function        
         grad_cross = np.squeeze(cand_cross_grad)
-
-        cand_cross_grad_full = cov_grad_func(self.ls, compfull, cand)
-        grad_cross_full = np.squeeze(cand_cross_grad_full)
         
         grad_xp_m = np.dot(alpha.transpose(),grad_cross)
-        grad_xp_v = np.dot(-2*spla.cho_solve((obsv_chol_full, True),
-                                             cand_cross_full).transpose(),
-                            grad_cross_full)
-        #grad_xp_v = np.dot(-2*spla.cho_solve((obsv_chol, True),
-        #                                     cand_cross).transpose(),
-        #                    grad_cross)
+        grad_xp_v = np.dot(-2*spla.cho_solve(
+                (comp_pend_chol, True),cand_cross).transpose(), grad_cross)
+
+        grad_xp = 0.5*self.amp2*(grad_xp_m*np.tile(g_ei_m,(comp.shape[1],1)).T + (grad_xp_v.T*g_ei_s2).T)
         
-        grad_xp = 0.5*self.amp2*(grad_xp_m*g_ei_m + grad_xp_v*g_ei_s2)
+        grad_xp = np.sum(grad_xp,axis=0)
 
         if use_vanilla_ei:
             return -np.sum(ei), grad_xp.flatten()
@@ -612,9 +688,123 @@ class GPEIConstrainedProbitChooser:
                                 grad_constraint_xp_m*
                                 sps.norm.pdf(self.constraint_gain*ff))
 
+        grad_xp = (func_constraint_m*grad_xp + np.sum(ei)*grad_constraint_xp_m)
+
+        return constrained_ei, grad_xp.flatten()
+
+    def grad_optimize_ei_nopend(self, cand, comp, vals, labels, compute_grad=True):
+        # Here we have to compute the gradients for constrained ei
+        # This means deriving through the two kernels, the one for predicting
+        # constraint violations and the one predicting ei
+
+        # First pull out violating points
+        compfull = comp.copy()
+        comp = comp[labels > 0, :]
+        vals = vals[labels > 0]
+
+        # Use standard EI if there aren't enough observations of either
+        # positive or negative constraint violations
+        use_vanilla_ei = (np.all(labels > 0) or np.all(labels <= 0))
+
+        best = np.min(vals)
+        cand = np.reshape(cand, (-1, comp.shape[1]))
+        func_constraint_m = 1
+
+        if (not use_vanilla_ei):
+
+            # First we make predictions for the durations
+            # Compute covariances
+            comp_constraint_cov   = self.cov(self.constraint_amp2,
+                                             self.constraint_ls,
+                                             compfull)
+            cand_constraint_cross = self.cov(self.constraint_amp2,
+                                             self.constraint_ls,
+                                             compfull,cand)
+
+            # Cholesky decompositions
+            obsv_constraint_cov  = (comp_constraint_cov +
+                 self.constraint_noise*np.eye(compfull.shape[0]))
+            obsv_constraint_chol = spla.cholesky(obsv_constraint_cov,lower=True)
+
+            # Linear systems
+            t_alpha  = spla.cho_solve((obsv_constraint_chol, True), self.ff)
+
+            # Predict marginal mean times and (possibly) variances
+            ff = np.dot(cand_constraint_cross.T, t_alpha)
+
+            # Squash through Gaussian cdf
+            func_constraint_m = sps.norm.cdf(self.constraint_gain*ff)
+
+        # Now compute the gradients w.r.t. ei
+        # The primary covariances for prediction.
+        comp_cov   = self.cov(self.amp2, self.ls, comp)
+        cand_cross = self.cov(self.amp2, self.ls, comp, cand)
+        comp_cov_full   = self.cov(self.amp2, self.ls, compfull)
+        cand_cross_full = self.cov(self.amp2, self.ls, compfull, cand)
+
+        # Compute the required Cholesky.
+        obsv_cov  = comp_cov + self.noise*np.eye(comp.shape[0])
+        obsv_chol = spla.cholesky(obsv_cov, lower=True)
+        obsv_cov_full  = comp_cov_full + self.noise*np.eye(compfull.shape[0])
+        obsv_chol_full = spla.cholesky( obsv_cov_full, lower=True)
+
+        # Predictive things.
+        # Solve the linear systems.
+        alpha  = spla.cho_solve((obsv_chol, True), vals - self.mean)
+        beta   = spla.solve_triangular(obsv_chol_full, cand_cross_full, 
+                                       lower=True)
+
+        # Predict the marginal means and variances at candidates.
+        func_m = np.dot(cand_cross.T, alpha) + self.mean
+        func_v = self.amp2*(1+1e-6) - np.sum(beta**2, axis=0)
+        
+        # Expected improvement
+        func_s = np.sqrt(func_v)
+        u      = (best - func_m) / func_s
+        ncdf   = sps.norm.cdf(u)
+        npdf   = sps.norm.pdf(u)
+        ei     = func_s*(u*ncdf + npdf)
+
+        constrained_ei = -np.sum(ei*func_constraint_m)
+        if not compute_grad:
+            return constrained_ei
+
+        # Gradients of ei w.r.t. mean and variance
+        g_ei_m = -ncdf
+        g_ei_s2 = 0.5*npdf / func_s
+
+        # Apply covariance function
+        cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
+        cand_cross_grad = cov_grad_func(self.ls, comp, cand)
+        grad_cross = np.squeeze(cand_cross_grad)
+
+        cand_cross_grad_full = cov_grad_func(self.ls, compfull, cand)
+        grad_cross_full = np.squeeze(cand_cross_grad_full)
+        
+        grad_xp_m = np.dot(alpha.transpose(),grad_cross)
+        grad_xp_v = np.dot(-2*spla.cho_solve((obsv_chol_full, True),
+                                             cand_cross_full).transpose(),
+                            grad_cross_full)
+        
+        grad_xp = 0.5*self.amp2*(grad_xp_m*g_ei_m + grad_xp_v*g_ei_s2)
+
+        if use_vanilla_ei:
+            return -np.sum(ei), grad_xp.flatten()
+
+        # Apply constraint classifier
+        cand_cross_grad = cov_grad_func(self.constraint_ls, compfull, cand)
+        grad_cross_t = np.squeeze(cand_cross_grad)
+
+        grad_constraint_xp_m = np.dot(t_alpha.transpose(),grad_cross_t)
+        grad_constraint_xp_m = (0.5*self.constraint_amp2*
+                                self.constraint_gain*
+                                grad_constraint_xp_m*
+                                sps.norm.pdf(self.constraint_gain*ff))
+
         grad_xp = (func_constraint_m*grad_xp + ei*grad_constraint_xp_m)
 
         return constrained_ei, grad_xp.flatten()
+
 
     def compute_constrained_ei(self, comp, pend, cand, vals, labels):
         # First we make predictions for the durations as that
@@ -922,9 +1112,9 @@ class GPEIConstrainedProbitChooser:
         self.ff = ff
 
         # Update gain
-        hypers = util.slice_sample(np.array([self.constraint_gain]), 
+        hypers = util.slice_sample(np.array([self.constraint_gain]),
                                    updateGain, compwise=True)
-        self.constraint_gain = hypers
+        self.constraint_gain = hypers[0]
 
     def _sample_noisy(self, comp, vals):
         def logprob(hypers):
