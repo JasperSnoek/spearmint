@@ -13,7 +13,7 @@ DEPENDENCIES
 This package requires:
 Python 2.7
 Numpy version 1.6.1+
-http://numpy.scipy.org/
+http://www.numpy.org/
 On Ubuntu linux you can install this package using the command:
 apt-get install python-numpy
 
