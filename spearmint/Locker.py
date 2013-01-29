@@ -50,17 +50,6 @@ class Locker:
                 self.locks[filename] = 1
             return not fail
 
-    def lock(self, filename):
-        if self.locks.has_key(filename):
-            self.locks[filename] += 1
-            return True
-        else:
-            cmd = 'ln -s /dev/null "%s.lock" 2> /dev/null' % (filename)
-            fail = os.system(cmd)
-            if not fail:
-                self.locks[filename] = 1
-            return not fail
-
     def unlock(self, filename):
         if not self.locks.has_key(filename):
             sys.stderr.write("Trying to unlock not-locked file %s.\n" % 
