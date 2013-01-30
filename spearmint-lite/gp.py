@@ -19,17 +19,19 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+"""
+gp.py contains utility functions related to computation in Gaussian processes.
+"""
 import numpy as np
 import scipy.linalg as spla
 import scipy.optimize as spo
 import scipy.io as sio
-import matplotlib
-import matplotlib.pyplot as plt
 import scipy.weave
-import time
-
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass
+    
 SQRT_3 = np.sqrt(3.0)
 SQRT_5 = np.sqrt(5.0)
 
@@ -131,30 +133,6 @@ def grad_Matern52(ls, x1, x2=None):
     r       = np.sqrt(dist2(ls, x1, x2))
     grad_r2 = -(5.0/6.0)*np.exp(-SQRT_5*r)*(1 + SQRT_5*r)
     return grad_r2[:,:,np.newaxis] * grad_dist2(ls, x1, x2)
-
-def linearARD(ls, x1, x2=None, grad=False):
-    if x2 is None:
-        # Find distance with self for x1.
-
-        # Rescale.
-        xx1 = x1 / ls        
-        xx2 = xx1
-
-    else:
-        # Rescale.
-        xx1 = x1 / ls
-        xx2 = x2 / ls
-
-    K = np.dot(xx1, xx2.T)
-    if grad:
-        gKx = (-2*np.dot(xx1[:,np.newaxis,:], xx2[:,np.newaxis,:]).T)[0,:,:,:]
-        return (K, gKx)
-    else:
-        return K
-
-def dist_Mahalanobis(U, x1, x2=None):
-    W = np.dot(U,U.T)
-    
 
 class GP:
     def __init__(self, covar="Matern52", mcmc_iters=10, noiseless=False):
@@ -320,7 +298,7 @@ def main():
     # Let's start with some random values
     x = np.linspace(0,1,10)[:,np.newaxis]*10#np.random.rand(100)[:,np.newaxis]
     y = np.random.randn(10)
-    mygp = GP(covar='linearARD')
+    mygp = GP(covar='ARDSE')
     mygp.real_init(x.shape[1], y)
 
     # Sample some functions given these hyperparameters and plot them
@@ -330,7 +308,10 @@ def main():
         y = np.random.randn(100)
     
         fsamp = mygp.mean + np.dot(spla.cholesky(K).transpose(), y)
-        plt.plot(x, fsamp)
+        try:
+            plt.plot(x, fsamp)
+        except:
+            print 'Install matplotlib to get figures'
 
     print 'Loglikelihood before optimizing: ', mygp.logprob(x,y)
     mygp.optimize_hypers(x,y)
