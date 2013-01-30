@@ -311,12 +311,16 @@ def main():
         try:
             plt.plot(x, fsamp)
         except:
-            print 'Install matplotlib to get figures'
+            pass
 
     print 'Loglikelihood before optimizing: ', mygp.logprob(x,y)
     mygp.optimize_hypers(x,y)
     print 'Loglikelihood after optimizing: ', mygp.logprob(x,y)
         
-    plt.show()
+    try:
+        plt.show()
+    except:
+        print 'Install matplotlib to get figures'        
+
 if __name__ == '__main__':
     main()
