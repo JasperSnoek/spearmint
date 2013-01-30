@@ -26,11 +26,12 @@ import numpy as np
 import scipy.linalg as spla
 import scipy.optimize as spo
 import scipy.io as sio
-import matplotlib
-import matplotlib.pyplot as plt
 import scipy.weave
-import time
-
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass
+    
 SQRT_3 = np.sqrt(3.0)
 SQRT_5 = np.sqrt(5.0)
 
@@ -307,7 +308,10 @@ def main():
         y = np.random.randn(100)
     
         fsamp = mygp.mean + np.dot(spla.cholesky(K).transpose(), y)
-        plt.plot(x, fsamp)
+        try:
+            plt.plot(x, fsamp)
+        except:
+            print 'Install matplotlib to get figures'
 
     print 'Loglikelihood before optimizing: ', mygp.logprob(x,y)
     mygp.optimize_hypers(x,y)
