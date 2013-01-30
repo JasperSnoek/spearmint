@@ -19,27 +19,6 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-##
-# Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-# 
-# This code is written for research and educational purposes only to 
-# supplement the paper entitled
-# "Practical Bayesian Optimization of Machine Learning Algorithms"
-# by Snoek, Larochelle and Adams
-# Advances in Neural Information Processing Systems, 2012
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import optparse
 import tempfile
 import datetime
@@ -49,6 +28,7 @@ import imp
 import os
 import re
 import Locker
+import subprocess
 
 from google.protobuf import text_format
 from spearmint_pb2   import *
@@ -146,9 +126,8 @@ def main_wrapper(options, args):
             # Run it as a Matlab function.
             function_call = "matlab_wrapper('%s'), quit;" % (job_file)
             matlab_cmd    = ('matlab -nosplash -nodesktop -r "%s"' % 
-                             (function_call))
-            sys.stderr.write(matlab_cmd + "\n")
-            os.system(matlab_cmd)
+                             (function_call))            
+            subprocess.check_call(matlab_cmd)
 
         elif job.language == PYTHON:
             # Run a Python function
@@ -197,7 +176,7 @@ def main_wrapper(options, args):
             cmd = './%s %s' % (job.name, job_file)
             sys.stderr.write("Executing command '%s'\n" % (cmd))
 
-            os.system(cmd)
+            subprocess.check_call(cmd, shell=True)
 
         elif job.language == MCR:
 
@@ -211,7 +190,7 @@ def main_wrapper(options, args):
 
             cmd = './run_%s.sh %s %s' % (job.name, mcr_loc, job_file)
             sys.stderr.write("Executing command '%s'\n" % (cmd))
-            os.system(cmd)
+            subprocess.check_call(cmd, shell=True)
 
         else:
             raise Exception("That function type has not been implemented.")
@@ -413,7 +392,7 @@ def save_expt(filename, expt):
     fh.write(text_format.MessageToString(expt))
     fh.close()
     cmd = 'mv "%s" "%s"' % (fh.name, filename)
-    os.system(cmd)
+    subprocess.check_call(cmd)
 
 def save_job(filename, job):
     fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -421,7 +400,7 @@ def save_job(filename, job):
     fh.write(job.SerializeToString())
     fh.close()
     cmd = 'mv "%s" "%s"' % (fh.name, filename)
-    os.system(cmd)
+    subprocess.check_call(cmd, shell=True)
 
 def sge_submit(name, output_file, modules, job_file, working_dir):
 
