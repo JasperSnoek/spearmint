@@ -28,19 +28,12 @@ import imp
 import os
 import re
 import Locker
-import subprocess
 
 from google.protobuf import text_format
 from spearmint_pb2   import *
 from ExperimentGrid  import *
 
 # System dependent modules
-DEFAULT_MODULES = [ 'packages/epd/7.1-2',
-                    'packages/matlab/r2011b',
-                    'mpi/openmpi/1.2.8/intel',
-                    'libraries/mkl/10.0',
-                    'packages/cuda/4.0',
-                    ]
 MCR_LOCATION = "/home/matlab/v715" # hack
 
 #
@@ -126,8 +119,9 @@ def main_wrapper(options, args):
             # Run it as a Matlab function.
             function_call = "matlab_wrapper('%s'), quit;" % (job_file)
             matlab_cmd    = ('matlab -nosplash -nodesktop -r "%s"' % 
-                             (function_call))            
-            subprocess.check_call(matlab_cmd)
+                             (function_call))
+            sys.stderr.write(matlab_cmd + "\n")
+            subprocess.check_call(matlab_cmd, shell=True)
 
         elif job.language == PYTHON:
             # Run a Python function
@@ -257,7 +251,7 @@ def main_controller(options, args):
     # Loop until we run out of jobs.
     while True:
         attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options)
-        time.sleep(1)
+        time.sleep(0.1)
  
 def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     sys.stderr.write("\n")
@@ -272,9 +266,12 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
                                options.grid_seed)
 
     # Print out the current best function value.
-    best_val, best_job = expt_grid.get_best()
-    sys.stderr.write("Current best: %f (job %d)\n" % (best_val, best_job))
- 
+    best_val, best_job = expt_grid.get_best()    
+    if best_job >= 0:
+        sys.stderr.write("Current best: %f (job %d)\n" % (best_val, best_job))
+    else:
+        sys.stderr.write("Current best: No results returned yet.\n")
+
     # Gets you everything - NaN for unknown values & durations.
     grid, values, durations = expt_grid.get_grid()
     
@@ -285,6 +282,18 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     sys.stderr.write("%d candidates   %d pending   %d complete\n" % 
                      (candidates.shape[0], pending.shape[0], complete.shape[0]))
       
+    # Verify that pending jobs are actually running.
+    for job_id in pending:
+        sgeid = expt_grid.get_sgeid(job_id)
+        reset_job = False
+        
+        try:
+            # Send an alive signal to proc (note this could kill it in windows)
+            os.kill(sgeid, 0)
+        except OSError:
+            # Job is no longer running but still in the candidate list. Assume it crashed out.
+            expt_grid.set_candidate(job_id)
+
     # Track the time series of optimization.
     trace_fh = open(os.path.join(expt_dir, 'trace.csv'), 'a')
     trace_fh.write("%d,%f,%d,%d,%d,%d\n"
@@ -315,7 +324,7 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
         return
 
     # Ask the chooser to actually pick one.
-    job_id = chooser.next(grid, values, durations, candidates, pending, 
+    job_id = chooser.next(grid, values, durations, candidates, pending,
                           complete)
 
     # If the job_id is a tuple, then the chooser picked a new job.
@@ -355,20 +364,21 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     output_file = os.path.join(output_subdir,
                                '%08d.out' % (job_id))
 
-    queue_id, msg = sge_submit("%s-%08d" % (expt_name, job_id),
-                             output_file,
-                             DEFAULT_MODULES,
-                             job_file, work_dir)
-    if queue_id is None:
-        sys.stderr.write("Failed to submit job: %s" % (msg))
+    process = job_submit("%s-%08d" % (expt_name, job_id),
+                         output_file,
+                         job_file, work_dir)
+    process.poll()
+    if process.returncode is not None and process.returncode < 0:
+        sys.stderr.write("Failed to submit job or job crashed "
+                         "with return code %d !\n" % process.returncode)
         sys.stderr.write("Deleting job file.\n")
         os.unlink(job_file)
         return
     else:
-        sys.stderr.write("Submitted as job %d\n" % (queue_id))
+        sys.stderr.write("Submitted job as process: %d\n" % process.pid)
 
     # Now, update the experiment status to submitted.
-    expt_grid.set_submitted(job_id, queue_id)
+    expt_grid.set_submitted(job_id, process.pid)
 
     return
 
@@ -392,7 +402,7 @@ def save_expt(filename, expt):
     fh.write(text_format.MessageToString(expt))
     fh.close()
     cmd = 'mv "%s" "%s"' % (fh.name, filename)
-    subprocess.check_call(cmd)
+    subprocess.check_call(cmd, shell=True)
 
 def save_job(filename, job):
     fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -402,23 +412,20 @@ def save_job(filename, job):
     cmd = 'mv "%s" "%s"' % (fh.name, filename)
     subprocess.check_call(cmd, shell=True)
 
-def sge_submit(name, output_file, modules, job_file, working_dir):
+def job_submit(name, output_file, job_file, working_dir):
 
-    cmd = ('''python spearmint.py --wrapper "%s" > %s''' % 
+    cmd = ('''python spearmint_sync.py --wrapper "%s" > %s''' % 
            (job_file, output_file))
+    output_file = open(output_file, 'w')
 
     # Submit the job.
     locker = Locker()
     locker.unlock(working_dir + '/expt-grid.pkl')
-    process = subprocess.Popen(cmd, shell=True)
-    output = 'Your job 1'
+    process = subprocess.Popen(cmd,
+                               stdout=output_file,
+                               stderr=output_file, shell=True)
 
-    # Parse out the job id.
-    match = re.search(r'Your job (\d+)', output)
-    if match:
-        return int(match.group(1)), output
-    else:
-        return None, output
+    return process
 
 if __name__ == '__main__':
     main()
