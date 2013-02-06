@@ -240,7 +240,7 @@ class GPEIOptChooser:
             results = [pool.apply_async(optimize_pt,args=(
                         c,b,comp,pend,vals,copy.copy(self))) for c in cand2]
             for res in results:
-                cand = np.vstack((cand, res.get()))                
+                cand = np.vstack((cand, res.get(1e8)))
             pool.close()
             
             overall_ei = self.ei_over_hypers(comp,pend,cand,vals)
