@@ -31,7 +31,7 @@ On Ubuntu linux you can install this package using the command:
 * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) (for the fully automated code).
 On Ubuntu linux you can install this package using the command:
 		
-		apt-get install python-protobuf. 
+		apt-get install python-protobuf
 		
 	and on Mac with:
 
@@ -108,7 +108,7 @@ function value (that is being optimized) at these inputs.
 
 To run spearmint, go back into the top-level directory and type:
 
-	python spearmint_sync.py --method=GPEIOptChooser --method-args=noiseless=1 braninpy'. 
+	python spearmint_sync.py --method=GPEIOptChooser --method-args=noiseless=1 braninpy
 
 This will run spearmint according to the GP-EI MCMC strategy.  The code will sequentially spawn
 processes that call the wrapper function and it will poll for results.
