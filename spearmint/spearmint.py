@@ -122,7 +122,7 @@ def main_wrapper(options, args):
     try:
         if job.language == MATLAB:
             # Run it as a Matlab function.
-            function_call = "matlab_wrapper('%s'), quit;" % (job_file)
+            function_call = "matlab_wrapper('%s'),quit;" % (job_file)
             matlab_cmd    = 'matlab -nosplash -nodesktop -r "%s"' % (function_call)
             sys.stderr.write(matlab_cmd + "\n")
             os.system(matlab_cmd)
