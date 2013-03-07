@@ -2,10 +2,11 @@ Spearmint
 ---------
 
 Spearmint is a package to perform Bayesian optimization according to the
-algorithms outlined in the paper:
-Practical Bayesian Optimization of Machine Learning Algorithms
-Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-Advances in Neural Information Processing Systems, 2012
+algorithms outlined in the paper:  
+
+**Practical Bayesian Optimization of Machine Learning Algorithms**  
+Jasper Snoek, Hugo Larochelle and Ryan P. Adams  
+*Advances in Neural Information Processing Systems*, 2012  
 
 This code is designed to automatically run experiments (thus the code
 name 'spearmint') in a manner that iteratively adjusts a number of
