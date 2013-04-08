@@ -216,7 +216,7 @@ the choosers provided in this package:
 
 * **SequentialChooser:** Chooses the next experiment using a high
 discrepancy Sobol sequence.  Experiments are taken sequentially from a
-course-to-fine grid.
+coarse-to-fine grid.
 
 * **RandomChooser**: Experiments are sampled randomly from the unit hypercube.
 
