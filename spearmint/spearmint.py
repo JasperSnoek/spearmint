@@ -86,7 +86,7 @@ def main():
                       action="store_true")
     parser.add_option("--polling-time", dest="polling_time",
                       help="The time in-between successive polls for results.",
-                      type="int", default=3)
+                      type="float", default=3.0)
 
     (options, args) = parser.parse_args()
 
