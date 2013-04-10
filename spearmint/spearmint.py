@@ -84,6 +84,9 @@ def main():
     parser.add_option("--wrapper", dest="wrapper",
                       help="Run in job-wrapper mode.",
                       action="store_true")
+    parser.add_option("--polling-time", dest="polling_time",
+                      help="The time in-between successive polls for results.",
+                      type="int", default=3)
 
     (options, args) = parser.parse_args()
 
@@ -254,7 +257,10 @@ def main_controller(options, args):
     # Loop until we run out of jobs.
     while True:
         attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options)
-        time.sleep(1)
+        # This is polling frequency. A higher frequency means that the algorithm
+        # picks up results more quickly after they finish, but also significantly 
+        # increases overhead.
+        time.sleep(options.polling_time)
  
 def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     import drmaa

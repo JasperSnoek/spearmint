@@ -10,8 +10,8 @@ then
     rm jobs/*
     rm expt-grid.pkl
     rm expt-grid.pkl.lock
-    rm GP*Chooser*.pkl
-    rm GPEIOptChooser*hyperparameters.txt
+    rm *GP*Chooser*.pkl
+    rm *Chooser*hyperparameters.txt
     rm best_job_and_result.txt
 else
     echo "$1 is not a valid directory"
