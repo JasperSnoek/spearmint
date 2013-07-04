@@ -1,7 +1,7 @@
 ##
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-# 
-# This code is written for research and educational purposes only to 
+#
+# This code is written for research and educational purposes only to
 # supplement the paper entitled
 # "Practical Bayesian Optimization of Machine Learning Algorithms"
 # by Snoek, Larochelle and Adams
@@ -11,12 +11,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
@@ -68,7 +68,7 @@ class ExperimentGrid:
         if variables is not None and not os.path.exists(self.jobs_pkl):
 
             # Set up the grid for the first time.
-            self.seed = grid_seed
+            self.seed   = grid_seed
             self.vmap   = GridMap(variables, grid_size)
             self.grid   = self._hypercube_grid(self.vmap.card(), grid_size)
             self.status = np.zeros(grid_size, dtype=int) + CANDIDATE_STATE
@@ -123,9 +123,9 @@ class ExperimentGrid:
     def add_to_grid(self, candidate):
         # Set up the grid
         self.grid   = np.vstack((self.grid, candidate))
-        self.status = np.append(self.status, np.zeros(1, dtype=int) + 
+        self.status = np.append(self.status, np.zeros(1, dtype=int) +
                                 int(CANDIDATE_STATE))
-        
+
         self.values = np.append(self.values, np.zeros(1)+np.nan)
         self.durs   = np.append(self.durs, np.zeros(1)+np.nan)
         self.sgeids = np.append(self.sgeids, np.zeros(1,dtype=int))
@@ -156,6 +156,17 @@ class ExperimentGrid:
     def set_broken(self, id):
         self.status[id] = BROKEN_STATE
         self._save_jobs()
+
+    def check_pending_jobs(self):
+        for job_id in self.get_pending():
+            sgeid = self.get_sgeid(job_id)
+
+            try:
+                # Send an alive signal to proc (note this could kill it in windows)
+                os.kill(sgeid, 0)
+            except OSError:
+                # Job is no longer running but still in the candidate list. Assume it crashed out.
+                self.set_candidate(job_id)
 
     def _load_jobs(self):
         fh   = open(self.jobs_pkl, 'r')
@@ -188,11 +199,11 @@ class ExperimentGrid:
     def _hypercube_grid(self, dims, size):
         # Generate from a sobol sequence
         sobol_grid = np.transpose(i4_sobol_generate(dims,size,self.seed))
-                
+
         return sobol_grid
 
 class GridMap:
-    
+
     def __init__(self, variables, grid_size):
         self.variables   = []
         self.cardinality = 0
@@ -223,7 +234,7 @@ class GridMap:
             else:
                 raise Exception("Unknown parameter type.")
         sys.stderr.write("Optimizing over %d dimensions\n" % (self.cardinality))
-    
+
     def get_params(self, u):
         if u.shape[0] != self.cardinality:
             raise Exception("Hypercube dimensionality is incorrect.")
@@ -232,7 +243,7 @@ class GridMap:
         index  = 0
         for variable in self.variables:
             param = Parameter()
-            
+
             param.name = variable['name']
 
             if variable['type'] == 'int':
@@ -253,11 +264,11 @@ class GridMap:
 
             else:
                 raise Exception("Unknown parameter type.")
-            
+
             params.append(param)
 
         return params
-            
+
     def card(self):
         return self.cardinality
 
