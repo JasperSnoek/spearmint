@@ -6,6 +6,17 @@ from ExperimentGrid  import *
 from helpers         import *
 
 
+# System dependent modules
+DEFAULT_MODULES = [ 'packages/epd/7.1-2',
+                    'packages/matlab/r2011b',
+                    'mpi/openmpi/1.2.8/intel',
+                    'libraries/mkl/10.0',
+                    'packages/cuda/4.0',
+                    ]
+
+MCR_LOCATION = "/home/matlab/v715" # hack
+
+
 def job_runner(job):
     '''This fn runs in a new process.  Now we are going to do a little
     bookkeeping and then spin off the actual job that does whatever it is we're

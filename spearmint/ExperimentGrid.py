@@ -30,6 +30,7 @@ import numpy.random as npr
 from spearmint_pb2 import *
 from Locker        import *
 from sobol_lib     import *
+from helpers       import *
 
 CANDIDATE_STATE = 0
 SUBMITTED_STATE = 1
@@ -60,9 +61,9 @@ class ExperimentGrid:
         self.locker   = Locker()
 
         # Only one process at a time is allowed to have access to this.
-        sys.stderr.write("Waiting to lock grid...")
+        #log("Waiting to lock grid...")
         self.locker.lock_wait(self.jobs_pkl)
-        sys.stderr.write("...acquired\n")
+        #log("...acquired\n")
 
         # Does this exist already?
         if variables is not None and not os.path.exists(self.jobs_pkl):
@@ -86,7 +87,8 @@ class ExperimentGrid:
     def __del__(self):
         self._save_jobs()
         if self.locker.unlock(self.jobs_pkl):
-            sys.stderr.write("Released lock on job grid.\n")
+            pass
+            #log("Released lock on job grid.\n")
         else:
             raise Exception("Could not release lock on job grid.\n")
 
@@ -222,7 +224,7 @@ class GridMap:
                                         'options' : list(variable.options)})
             else:
                 raise Exception("Unknown parameter type.")
-        sys.stderr.write("Optimizing over %d dimensions\n" % (self.cardinality))
+        log("Optimizing over %d dimensions\n" % (self.cardinality))
 
     def get_params(self, u):
         if u.shape[0] != self.cardinality:

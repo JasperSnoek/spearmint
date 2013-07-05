@@ -36,16 +36,6 @@ from helpers         import *
 from runner          import job_runner
 
 
-# System dependent modules
-DEFAULT_MODULES = [ 'packages/epd/7.1-2',
-                    'packages/matlab/r2011b',
-                    'mpi/openmpi/1.2.8/intel',
-                    'libraries/mkl/10.0',
-                    'packages/cuda/4.0',
-                    ]
-MCR_LOCATION = "/home/matlab/v715" # hack
-
-
 # There are two things going on here.  There are "experiments", which are
 # large-scale things that live in a directory and in this case correspond
 # to the task of minimizing a complicated function.  These experiments
@@ -176,7 +166,7 @@ def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
     # candidate set if they have crashed or gotten lost.
     for job_id in pending:
         proc_id = expt_grid.get_proc_id(job_id)
-        if not driver.is_proc_alive(proc_id):
+        if not driver.is_proc_alive(job_id, proc_id):
             log("Set job %d back to pending status.\n" % (job_id))
             expt_grid.set_candidate(job_id)
 
@@ -200,39 +190,39 @@ def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
 
     else:
 
-        # Try to keep max_concurrent jobs running if possible
-        for i in range(min(options.max_concurrent - n_pending, n_candidates)):
-            # Ask the chooser to pick the next candidate
-            job_id = chooser.next(grid, values, durations, candidates, pending, complete)
+        # start a bunch of candidate jobs if possible
+        #for i in range(min(options.max_concurrent - n_pending, n_candidates)):
 
-            # If the job_id is a tuple, then the chooser picked a new job.
-            # We have to add this to our grid
-            if isinstance(job_id, tuple):
-                (job_id, candidate) = job_id
-                job_id = expt_grid.add_to_grid(candidate)
+        # Ask the chooser to pick the next candidate
+        job_id = chooser.next(grid, values, durations, candidates, pending, complete)
 
-            log("Selected job %d from the grid.\n" % (job_id))
+        # If the job_id is a tuple, then the chooser picked a new job.
+        # We have to add this to our grid
+        if isinstance(job_id, tuple):
+            (job_id, candidate) = job_id
+            job_id = expt_grid.add_to_grid(candidate)
 
-            # Convert this back into an interpretable job and add metadata.
-            job = Job()
-            job.id        = job_id
-            job.expt_dir  = expt_dir
-            job.name      = expt.name
-            job.language  = expt.language
-            job.status    = 'submitted'
-            job.submit_t  = int(time.time())
-            job.param.extend(expt_grid.get_params(job_id))
+        log("Selected job %d from the grid... " % (job_id))
 
-            save_job(job)
-            pid = driver.submit_job(job)
-            if pid:
-                sys.stderr.write("Submitted as job %d\n" % (pid))
-                expt_grid.set_submitted(job_id, pid)
-                n_pending += 1
-            else:
-                sys.stderr.write("Failed to submit job: %s" % (msg))
-                sys.stderr.write("Deleting job file.\n")
-                os.unlink(job_file_for(job))
+        # Convert this back into an interpretable job and add metadata.
+        job = Job()
+        job.id        = job_id
+        job.expt_dir  = expt_dir
+        job.name      = expt.name
+        job.language  = expt.language
+        job.status    = 'submitted'
+        job.submit_t  = int(time.time())
+        job.param.extend(expt_grid.get_params(job_id))
+
+        save_job(job)
+        pid = driver.submit_job(job)
+        if pid:
+            log("submitted - pid = %d\n" % (pid))
+            expt_grid.set_submitted(job_id, pid)
+        else:
+            log("Failed to submit!\n")
+            log("Deleting job file.\n")
+            os.unlink(job_file_for(job))
 
     return
 

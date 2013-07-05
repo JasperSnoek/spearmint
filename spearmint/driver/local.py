@@ -23,7 +23,7 @@ class LocalDriver(DispatchDriver):
            return None
 
 
-    def is_proc_alive(self, proc_id):
+    def is_proc_alive(self, job_id, proc_id):
         try:
             # Send an alive signal to proc (note this could kill it in windows)
             os.kill(proc_id, 0)
