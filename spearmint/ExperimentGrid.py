@@ -68,13 +68,13 @@ class ExperimentGrid:
         if variables is not None and not os.path.exists(self.jobs_pkl):
 
             # Set up the grid for the first time.
-            self.seed   = grid_seed
-            self.vmap   = GridMap(variables, grid_size)
-            self.grid   = self._hypercube_grid(self.vmap.card(), grid_size)
-            self.status = np.zeros(grid_size, dtype=int) + CANDIDATE_STATE
-            self.values = np.zeros(grid_size) + np.nan
-            self.durs   = np.zeros(grid_size) + np.nan
-            self.sgeids = np.zeros(grid_size, dtype=int)
+            self.seed     = grid_seed
+            self.vmap     = GridMap(variables, grid_size)
+            self.grid     = self._hypercube_grid(self.vmap.card(), grid_size)
+            self.status   = np.zeros(grid_size, dtype=int) + CANDIDATE_STATE
+            self.values   = np.zeros(grid_size) + np.nan
+            self.durs     = np.zeros(grid_size) + np.nan
+            self.proc_ids = np.zeros(grid_size, dtype=int)
 
             # Save this out.
             self._save_jobs()
@@ -117,8 +117,8 @@ class ExperimentGrid:
         else:
             return np.nan, -1
 
-    def get_sgeid(self, id):
-        return self.sgeids[id]
+    def get_proc_id(self, id):
+        return self.proc_ids[id]
 
     def add_to_grid(self, candidate):
         # Set up the grid
@@ -128,7 +128,7 @@ class ExperimentGrid:
 
         self.values = np.append(self.values, np.zeros(1)+np.nan)
         self.durs   = np.append(self.durs, np.zeros(1)+np.nan)
-        self.sgeids = np.append(self.sgeids, np.zeros(1,dtype=int))
+        self.proc_ids = np.append(self.proc_ids, np.zeros(1,dtype=int))
 
         # Save this out.
         self._save_jobs()
@@ -138,9 +138,9 @@ class ExperimentGrid:
         self.status[id] = CANDIDATE_STATE
         self._save_jobs()
 
-    def set_submitted(self, id, sgeid):
+    def set_submitted(self, id, proc_id):
         self.status[id] = SUBMITTED_STATE
-        self.sgeids[id] = sgeid
+        self.proc_ids[id] = proc_id
         self._save_jobs()
 
     def set_running(self, id):
@@ -157,17 +157,6 @@ class ExperimentGrid:
         self.status[id] = BROKEN_STATE
         self._save_jobs()
 
-    def check_pending_jobs(self):
-        for job_id in self.get_pending():
-            sgeid = self.get_sgeid(job_id)
-
-            try:
-                # Send an alive signal to proc (note this could kill it in windows)
-                os.kill(sgeid, 0)
-            except OSError:
-                # Job is no longer running but still in the candidate list. Assume it crashed out.
-                self.set_candidate(job_id)
-
     def _load_jobs(self):
         fh   = open(self.jobs_pkl, 'r')
         jobs = cPickle.load(fh)
@@ -178,7 +167,7 @@ class ExperimentGrid:
         self.status = jobs['status']
         self.values = jobs['values']
         self.durs   = jobs['durs']
-        self.sgeids = jobs['sgeids']
+        self.proc_ids = jobs['proc_ids']
 
     def _save_jobs(self):
 
@@ -189,7 +178,7 @@ class ExperimentGrid:
                        'status' : self.status,
                        'values' : self.values,
                        'durs'   : self.durs,
-                       'sgeids' : self.sgeids }, fh)
+                       'proc_ids' : self.proc_ids }, fh)
         fh.close()
 
         # Use an atomic move for better NFS happiness.

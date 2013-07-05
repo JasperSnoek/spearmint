@@ -1,7 +1,7 @@
 ##
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-# 
-# This code is written for research and educational purposes only to 
+#
+# This code is written for research and educational purposes only to
 # supplement the paper entitled
 # "Practical Bayesian Optimization of Machine Learning Algorithms"
 # by Snoek, Larochelle and Adams
@@ -11,12 +11,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -97,7 +97,7 @@ def main():
     else:
         # Otherwise run in controller mode.
         main_controller(options, args)
-    
+
 ##############################################################################
 ##############################################################################
 def main_wrapper(options, args):
@@ -112,7 +112,7 @@ def main_wrapper(options, args):
     job      = load_job(job_file)
 
     ExperimentGrid.job_running(job.expt_dir, job.id)
-    
+
     # Update metadata.
     job.start_t = int(time.time())
     job.status  = 'running'
@@ -200,7 +200,7 @@ def main_wrapper(options, args):
     except:
         sys.stderr.write("Problem executing the function\n")
         print sys.exc_info()
-        
+
     end_time = time.time()
     duration = end_time - start_time
     ##########################################################################
@@ -213,13 +213,13 @@ def main_wrapper(options, args):
         success = False
 
     if success:
-        sys.stderr.write("Completed successfully in %0.2f seconds. [%f]\n" 
+        sys.stderr.write("Completed successfully in %0.2f seconds. [%f]\n"
                          % (duration, job.value))
 
         # Update the status for this job.
         ExperimentGrid.job_complete(job.expt_dir, job.id,
                                     job.value, duration)
-    
+
         # Update metadata.
         job.end_t    = int(time.time())
         job.status   = 'complete'
@@ -230,7 +230,7 @@ def main_wrapper(options, args):
 
         # Update the status for this job.
         ExperimentGrid.job_broken(job.expt_dir, job.id)
-    
+
         # Update metadata.
         job.end_t    = int(time.time())
         job.status   = 'broken'
@@ -253,20 +253,20 @@ def main_controller(options, args):
     # Load up the chooser module.
     module  = __import__(options.chooser_module)
     chooser = module.init(expt_dir, options.chooser_args)
- 
+
     # Loop until we run out of jobs.
     while True:
         attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options)
         # This is polling frequency. A higher frequency means that the algorithm
-        # picks up results more quickly after they finish, but also significantly 
+        # picks up results more quickly after they finish, but also significantly
         # increases overhead.
         time.sleep(options.polling_time)
- 
+
 def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     import drmaa
 
     sys.stderr.write("\n")
-    
+
     expt_file = os.path.join(expt_dir, options.config_file)
     expt      = load_expt(expt_file)
 
@@ -279,15 +279,15 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     # Print out the current best function value.
     best_val, best_job = expt_grid.get_best()
     sys.stderr.write("Current best: %f (job %d)\n" % (best_val, best_job))
- 
+
     # Gets you everything - NaN for unknown values & durations.
     grid, values, durations = expt_grid.get_grid()
-    
+
     # Returns lists of indices.
     candidates = expt_grid.get_candidates()
     pending    = expt_grid.get_pending()
     complete   = expt_grid.get_complete()
-    sys.stderr.write("%d candidates   %d pending   %d complete\n" % 
+    sys.stderr.write("%d candidates   %d pending   %d complete\n" %
                      (candidates.shape[0], pending.shape[0], complete.shape[0]))
 
     # Verify that pending jobs are actually running.
@@ -296,18 +296,18 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     for job_id in pending:
         sgeid = expt_grid.get_sgeid(job_id)
         reset_job = False
-        
+
         try:
             status = s.jobStatus(str(sgeid))
         except:
             sys.stderr.write("EXC: %s\n" % (str(sys.exc_info()[0])))
-            sys.stderr.write("Could not find SGE id for job %d (%d)\n" % 
+            sys.stderr.write("Could not find SGE id for job %d (%d)\n" %
                              (job_id, sgeid))
             status = -1
             reset_job = True
 
         if status == drmaa.JobState.UNDETERMINED:
-            sys.stderr.write("Job %d (%d) in undetermined state.\n" % 
+            sys.stderr.write("Job %d (%d) in undetermined state.\n" %
                              (job_id, sgeid))
             reset_job = True
 
@@ -319,12 +319,12 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
                         drmaa.JobState.USER_SYSTEM_ON_HOLD,
                         drmaa.JobState.SYSTEM_SUSPENDED,
                         drmaa.JobState.USER_SUSPENDED]:
-            sys.stderr.write("Job %d (%d) is held or suspended.\n" % 
+            sys.stderr.write("Job %d (%d) is held or suspended.\n" %
                              (job_id, sgeid))
             reset_job = True
 
         elif status == drmaa.JobState.DONE:
-            sys.stderr.write("Job %d (%d) complete but not yet updated.\n" % 
+            sys.stderr.write("Job %d (%d) complete but not yet updated.\n" %
                              (job_id, sgeid))
 
         elif status == drmaa.JobState.FAILED:
@@ -345,7 +345,7 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
             sys.stderr.write("Set job %d back to pending status.\n" % (job_id))
 
     s.exit()
-      
+
     # Track the time series of optimization.
     trace_fh = open(os.path.join(expt_dir, 'trace.csv'), 'a')
     trace_fh.write("%d,%f,%d,%d,%d,%d\n"

@@ -24,17 +24,25 @@ import tempfile
 import datetime
 import subprocess
 import multiprocessing
+import importlib
 import time
 import imp
 import os
 import re
 import Locker
 
-from google.protobuf import text_format
-from spearmint_pb2   import *
 from ExperimentGrid  import *
+from helpers         import *
+from runner          import job_runner
+
 
 # System dependent modules
+DEFAULT_MODULES = [ 'packages/epd/7.1-2',
+                    'packages/matlab/r2011b',
+                    'mpi/openmpi/1.2.8/intel',
+                    'libraries/mkl/10.0',
+                    'packages/cuda/4.0',
+                    ]
 MCR_LOCATION = "/home/matlab/v715" # hack
 
 
@@ -47,7 +55,7 @@ MCR_LOCATION = "/home/matlab/v715" # hack
 # ExperimentGrid.
 #
 # The spearmint.py script can run in two modes, which reflect experiments
-# vs jobs.  When run with the --wrapper argument, it will try to run a
+# vs jobs.  When run with the --run-job argument, it will try to run a
 # single job.  This is not meant to be run by hand, but is intended to be
 # run by a job queueing system.  Without this argument, it runs in its main
 # controller mode, which determines the jobs that should be executed and
@@ -65,6 +73,9 @@ def parse_args():
     parser.add_option("--method", dest="chooser_module",
                       help="Method for choosing experiments.",
                       type="string", default="GPEIOptChooser")
+    parser.add_option("--driver", dest="driver",
+                      help="Runtime driver for jobs (local, or sge)",
+                      type="string", default="local")
     parser.add_option("--method-args", dest="chooser_args",
                       help="Arguments to pass to chooser module.",
                       type="string", default="")
@@ -77,6 +88,9 @@ def parse_args():
     parser.add_option("--config", dest="config_file",
                       help="Configuration file name.",
                       type="string", default="config.pb")
+    parser.add_option("--run-job", dest="job",
+                      help="Run a job in wrapper mode.",
+                      type="string", default="")
     parser.add_option("--polling-time", dest="polling_time",
                       help="The time in-between successive polls for results.",
                       type="float", default=3.0)
@@ -89,8 +103,11 @@ def parse_args():
 def main():
     (options, args) = parse_args()
 
+    if options.job:
+        job_runner(load_job(options.job))
+        exit(0)
+
     expt_dir  = os.path.realpath(args[0])
-    work_dir  = os.path.realpath('.')
     expt_name = os.path.basename(expt_dir)
 
     if not os.path.exists(expt_dir):
@@ -101,19 +118,28 @@ def main():
     check_experiment_dirs(expt_dir)
 
     # Load up the chooser module.
-    module  = __import__(options.chooser_module)
+    module  = importlib.import_module('chooser.' + options.chooser_module)
     chooser = module.init(expt_dir, options.chooser_args)
+
+    # Load up the job execution driver.
+    module = importlib.import_module('driver.' + options.driver)
+    driver = module.init()
 
     # Loop until we run out of jobs.
     while True:
-        attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options)
+        attempt_dispatch(expt_name, expt_dir, chooser, driver, options)
         # This is polling frequency. A higher frequency means that the algorithm
         # picks up results more quickly after they finish, but also significantly
         # increases overhead.
         time.sleep(options.polling_time)
 
 
-def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
+# TODO:
+#  * move check_pending_jobs out of ExperimentGrid, and implement two simple
+#  driver classes to handle local execution and SGE execution.
+#  * take cmdline engine arg into account, and submit job accordingly
+
+def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
     log("\n")
 
     expt_file = os.path.join(expt_dir, options.config_file)
@@ -139,217 +165,76 @@ def attempt_dispatch(expt_name, expt_dir, work_dir, chooser, options):
     candidates = expt_grid.get_candidates()
     pending    = expt_grid.get_pending()
     complete   = expt_grid.get_complete()
-    log("%d candidates   %d pending   %d complete\n" %
-                     (candidates.shape[0], pending.shape[0], complete.shape[0]))
 
-    # Verify that pending jobs are actually running.
-    expt_grid.check_pending_jobs()
+    n_candidates = candidates.shape[0]
+    n_pending    = pending.shape[0]
+    n_complete   = complete.shape[0]
+    log("%d candidates   %d pending   %d complete\n" %
+        (n_candidates, n_pending, n_complete))
+
+    # Verify that pending jobs are actually running, and add them back to the
+    # candidate set if they have crashed or gotten lost.
+    for job_id in pending:
+        proc_id = expt_grid.get_proc_id(job_id)
+        if not driver.is_proc_alive(proc_id):
+            log("Set job %d back to pending status.\n" % (job_id))
+            expt_grid.set_candidate(job_id)
 
     # Track the time series of optimization.
-    write_trace(expt_dir, best_val, best_job,
-                candidates.shape[0], pending.shape[0], complete.shape[0])
+    write_trace(expt_dir, best_val, best_job, n_candidates, n_pending, n_complete)
 
     # Print out the best job results
     write_best_job(expt_dir, best_val, best_job, expt_grid)
 
-    if complete.shape[0] >= options.max_finished_jobs:
+    if n_complete >= options.max_finished_jobs:
         log("Maximum number of finished jobs (%d) reached."
                          "Exiting\n" % options.max_finished_jobs)
         sys.exit(0)
 
-    if candidates.shape[0] == 0:
+    if n_candidates == 0:
         log("There are no candidates left.  Exiting.\n")
         sys.exit(0)
 
-    if pending.shape[0] >= options.max_concurrent:
-        log("Maximum number of jobs (%d) pending.\n"
-                         % (options.max_concurrent))
-        return
+    if n_pending >= options.max_concurrent:
+        log("Maximum number of jobs (%d) pending.\n" % (options.max_concurrent))
 
-    # Ask the chooser to actually pick one.
-    job_id = chooser.next(grid, values, durations, candidates, pending, complete)
+    else:
 
-    # If the job_id is a tuple, then the chooser picked a new job.
-    # We have to add this to our grid
-    if isinstance(job_id, tuple):
-        (job_id, candidate) = job_id
-        job_id = expt_grid.add_to_grid(candidate)
+        # Try to keep max_concurrent jobs running if possible
+        for i in range(min(options.max_concurrent - n_pending, n_candidates)):
+            # Ask the chooser to pick the next candidate
+            job_id = chooser.next(grid, values, durations, candidates, pending, complete)
 
-    log("Selected job %d from the grid.\n" % (job_id))
+            # If the job_id is a tuple, then the chooser picked a new job.
+            # We have to add this to our grid
+            if isinstance(job_id, tuple):
+                (job_id, candidate) = job_id
+                job_id = expt_grid.add_to_grid(candidate)
 
-    # Convert this back into an interpretable job and add metadata.
-    job = Job()
-    job.id        = job_id
-    job.expt_dir  = expt_dir
-    job.name      = expt.name
-    job.language  = expt.language
-    job.status    = 'submitted'
-    job.submit_t  = int(time.time())
-    job.param.extend(expt_grid.get_params(job_id))
+            log("Selected job %d from the grid.\n" % (job_id))
 
-    save_job(job)
-    process = submit_job(job, work_dir)
-    expt_grid.set_submitted(job_id, process.pid)
+            # Convert this back into an interpretable job and add metadata.
+            job = Job()
+            job.id        = job_id
+            job.expt_dir  = expt_dir
+            job.name      = expt.name
+            job.language  = expt.language
+            job.status    = 'submitted'
+            job.submit_t  = int(time.time())
+            job.param.extend(expt_grid.get_params(job_id))
+
+            save_job(job)
+            pid = driver.submit_job(job)
+            if pid:
+                sys.stderr.write("Submitted as job %d\n" % (pid))
+                expt_grid.set_submitted(job_id, pid)
+                n_pending += 1
+            else:
+                sys.stderr.write("Failed to submit job: %s" % (msg))
+                sys.stderr.write("Deleting job file.\n")
+                os.unlink(job_file_for(job))
 
     return
-
-
-
-def job_runner(job):
-    '''This fn runs in a new process.  Now we are going to do a little
-    bookkeeping and then spin off the actual job that does whatever it is we're
-    trying to achieve.'''
-
-    redirect_output(job_output_file(job))
-    log("Running in wrapper mode for '%s'\n" % (job.id))
-
-    ExperimentGrid.job_running(job.expt_dir, job.id)
-
-    # Update metadata and save the job file, which will be read by the job
-    # wrappers.
-    job.start_t = int(time.time())
-    job.status  = 'running'
-    save_job(job)
-
-    success    = False
-    start_time = time.time()
-
-    try:
-        if job.language == MATLAB:   run_matlab_job(job)
-        elif job.language == PYTHON: run_python_job(job)
-        elif job.language == SHELL:  run_shell_job(job)
-        elif job.language == MCR:    run_mcr_job(job)
-        else:
-            raise Exception("That function type has not been implemented.")
-
-        success = True
-    except:
-        log("-" * 40 + "\n")
-        log("Problem executing the function:\n")
-        print sys.exc_info()
-
-    end_time = time.time()
-    duration = end_time - start_time
-
-    # The job output is written back to the job file, so we read it back in to
-    # get the results.
-    job_file = job_file_for(job)
-    job      = load_job(job_file)
-
-    log("Job file reloaded.\n")
-
-    if not job.HasField("value"):
-        log("Could not find value in output file.\n")
-        success = False
-
-    if success:
-        log("Completed successfully in %0.2f seconds. [%f]\n"
-                         % (duration, job.value))
-
-        # Update the status for this job.
-        ExperimentGrid.job_complete(job.expt_dir, job.id,
-                                    job.value, duration)
-        job.status = 'complete'
-    else:
-        log("Job failed in %0.2f seconds.\n" % (duration))
-
-        # Update the experiment status for this job.
-        ExperimentGrid.job_broken(job.expt_dir, job.id)
-        job.status = 'broken'
-
-    job.end_t    = int(time.time())
-    job.duration = duration
-
-    save_job(job)
-
-
-
-def run_matlab_job(job):
-    '''Run it as a Matlab function.'''
-
-    log("Running matlab job.\n")
-
-    job_file      = job_file_for(job)
-    function_call = "matlab_wrapper('%s'),quit;" % (job_file)
-    matlab_cmd    = ('matlab -nosplash -nodesktop -r "%s"' %
-                     (function_call))
-    log(matlab_cmd + "\n")
-    sh(matlab_cmd)
-
-
-# TODO: change this function to be more flexible when running python jobs
-# regarding the python path, experiment directory, etc...
-def run_python_job(job):
-    '''Run a Python function.'''
-
-    log("Running python job.\n")
-
-    # Add directory to the system path.
-    sys.path.append(os.path.realpath(job.expt_dir))
-
-    # Change into the directory.
-    os.chdir(job.expt_dir)
-    log("Changed into dir %s\n" % (os.getcwd()))
-
-    # Convert the PB object into useful parameters.
-    params = {}
-    for param in job.param:
-        dbl_vals = param.dbl_val._values
-        int_vals = param.int_val._values
-        str_vals = param.str_val._values
-
-        if len(dbl_vals) > 0:
-            params[param.name] = np.array(dbl_vals)
-        elif len(int_vals) > 0:
-            params[param.name] = np.array(int_vals, dtype=int)
-        elif len(str_vals) > 0:
-            params[param.name] = str_vals
-        else:
-            raise Exception("Unknown parameter type.")
-
-    # Load up this module and run
-    module  = __import__(job.name)
-    result = module.main(job.id, params)
-
-    log("Got result %f\n" % (result))
-
-    # Change back out.
-    os.chdir('..')
-
-    # Store the result.
-    job.value = result
-    save_job(job)
-
-def run_shell_job(job):
-    '''Run a shell based job.'''
-
-    log("Running shell job.\n")
-
-    # Change into the directory.
-    os.chdir(job.expt_dir)
-
-    cmd      = './%s %s' % (job.name, job_file_for(job))
-    log("Executing command '%s'\n" % (cmd))
-
-    sh(cmd)
-
-
-def run_mcr_job(job):
-    '''Run a compiled Matlab job.'''
-
-    log("Running a compiled Matlab job.\n")
-
-    # Change into the directory.
-    os.chdir(job.expt_dir)
-
-    if os.environ.has_key('MATLAB'):
-        mcr_loc = os.environ['MATLAB']
-    else:
-        mcr_loc = MCR_LOCATION
-
-    cmd = './run_%s.sh %s %s' % (job.name, mcr_loc, job_file_for(job))
-    log("Executing command '%s'\n" % (cmd))
-    sh(cmd)
 
 
 def write_trace(expt_dir, best_val, best_job,
@@ -371,33 +256,6 @@ def write_best_job(expt_dir, best_val, best_job, expt_grid):
     best_job_fh.close()
 
 
-def load_expt(filename):
-    fh = open(filename, 'rb')
-    expt = Experiment()
-    text_format.Merge(fh.read(), expt)
-    fh.close()
-    return expt
-
-def load_job(filename):
-    fh = open(filename, 'rb')
-    job = Job()
-    #text_format.Merge(fh.read(), job)
-    job.ParseFromString(fh.read())
-    fh.close()
-    return job
-
-def save_expt(filename, expt):
-    fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
-    fh.write(text_format.MessageToString(expt))
-    fh.close()
-    cmd = 'mv "%s" "%s"' % (fh.name, filename)
-    sh(cmd)
-
-def check_dir(path):
-    '''Create a directory if it doesn't exist.'''
-    if not os.path.exists(path):
-        os.mkdir(path)
-
 def check_experiment_dirs(expt_dir):
     '''Make output and jobs sub directories.'''
 
@@ -408,38 +266,12 @@ def check_experiment_dirs(expt_dir):
     check_dir(job_subdir)
 
 
-def job_file_for(job):
-    return os.path.join(job.expt_dir, 'jobs', '%08d.pb' % (job.id))
-
-
-def job_output_file(job):
-    return os.path.join(job.expt_dir, 'output', '%08d.out' % (job.id))
-
-
-def redirect_output(path):
-    outfile    = open(path, 'w')
-    sys.stdout = outfile
-    sys.stderr = outfile
-
-
-def save_job(job):
-    fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
-    fh.write(job.SerializeToString())
-    fh.close()
-
-    job_file = job_file_for(job)
-    cmd = 'mv "%s" "%s"' % (fh.name, job_file)
-    sh(cmd)
-
-
-def submit_job(job, working_dir):
+def submit_job(job):
     name = "%s-%08d" % (job.name, job.id)
-
-    #output_file = open(output_file, 'w')
 
     # Submit the job.
     locker = Locker()
-    locker.unlock(working_dir + '/expt-grid.pkl')
+    locker.unlock(grid_for(job))
     proc = multiprocessing.Process(target=job_runner, args=[job])
     proc.start()
 
@@ -453,14 +285,6 @@ def submit_job(job, working_dir):
         log("Submitted job as process: %d\n" % proc.pid)
 
     return proc
-
-
-def log(msg):
-    sys.stderr.write(msg)
-
-
-def sh(cmd):
-    subprocess.check_call(cmd, shell=True)
 
 
 if __name__ == '__main__':

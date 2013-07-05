@@ -67,3 +67,4 @@ class Locker:
     def lock_wait(self, filename):
         while not self.lock(filename):
           time.sleep(0.01)
+
