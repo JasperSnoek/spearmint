@@ -1,4 +1,5 @@
-##
+#!/usr/bin/env python2.7
+
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
 #
 # This code is written for research and educational purposes only to
@@ -61,7 +62,7 @@ def parse_args():
     parser.add_option("--max-finished-jobs", dest="max_finished_jobs",
                       type="int", default=10000)
     parser.add_option("--method", dest="chooser_module",
-                      help="Method for choosing experiments.",
+                      help="Method for choosing experiments [SequentialChooser, RandomChooser, GPEIOptChooser, GPEIOptChooser, GPEIperSecChooser, GPEIChooser]",
                       type="string", default="GPEIOptChooser")
     parser.add_option("--driver", dest="driver",
                       help="Runtime driver for jobs (local, or sge)",
@@ -97,7 +98,7 @@ def main():
         job_runner(load_job(options.job))
         exit(0)
 
-    expt_dir  = os.path.realpath(args[0])
+    expt_dir  = os.path.dirname(os.path.realpath(args[0]))
     expt_name = os.path.basename(expt_dir)
 
     if not os.path.exists(expt_dir):
@@ -216,11 +217,11 @@ def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
 
         save_job(job)
         pid = driver.submit_job(job)
-        if pid:
+        if pid != None:
             log("submitted - pid = %d\n" % (pid))
             expt_grid.set_submitted(job_id, pid)
         else:
-            log("Failed to submit!\n")
+            log("Failed to submit job!\n")
             log("Deleting job file.\n")
             os.unlink(job_file_for(job))
 
@@ -238,6 +239,8 @@ def write_trace(expt_dir, best_val, best_job,
 
 
 def write_best_job(expt_dir, best_val, best_job, expt_grid):
+    '''Write out the best_job_and_result.txt file containing the top results.'''
+
     best_job_fh = open(os.path.join(expt_dir, 'best_job_and_result.txt'), 'w')
     best_job_fh.write("Best result: %f\nJob-id: %d\nParameters: \n" %
                       (best_val, best_job))
@@ -257,6 +260,8 @@ def check_experiment_dirs(expt_dir):
 
 
 def submit_job(job):
+    '''Submit a job for execution.'''
+
     name = "%s-%08d" % (job.name, job.id)
 
     # Submit the job.
@@ -279,3 +284,4 @@ def submit_job(job):
 
 if __name__ == '__main__':
     main()
+

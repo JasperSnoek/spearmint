@@ -19,28 +19,9 @@ DEFAULT_MODULES = [ 'packages/epd/7.1-2',
                     'packages/cuda/4.0',
                     ]
 
-
-SGE_RUN_SCRIPT = '''
-#!/bin/bash
-#$ -S /bin/bash
-#$ -N "%s"
-#$ -j yes
-#$ -e "%s"
-#$ -o "%s"
-#$ -wd "%s"
-
-# Set up the environment
-#. /etc/profile
-#. ~/.profile
-
-# Make sure we have various modules.
+# Removed from SGE script...
+# Load matlab modules
 #module load %s
-
-# Spin off ourselves as a wrapper script.
-cd %s
-exec python2.7 supermint.py --run-job "%s"
-
-'''
 
 
 class SGEDriver(DispatchDriver):
@@ -49,10 +30,17 @@ class SGEDriver(DispatchDriver):
         output_file = job_output_file(job)
         job_file    = job_file_for(job)
         modules     = " ".join(DEFAULT_MODULES)
-        sge_script  = SGE_RUN_SCRIPT % (job.name, output_file, output_file,
-                                        job.expt_dir, modules, os.getcwd(), job_file)
+        mint_path   = sys.argv[0]
+        sge_script  = '%s --run-job "%s"' % (mint_path, job_file)
 
-        process = subprocess.Popen('qsub',
+        qsub_cmd    = ['qsub', '-S', '/bin/bash',
+                       '-N', "%s-%d" % (job.name, job.id),
+                       '-j', 'yes',
+                       '-e', output_file,
+                       '-o', output_file
+                      ]
+
+        process = subprocess.Popen(qsub_cmd,
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT,
@@ -103,7 +91,7 @@ class SGEDriver(DispatchDriver):
                 reset_job = True
 
             elif status == drmaa.JobState.DONE:
-                log("Job %d (%d) complete but not yet updated.\n" % (job_id, sgeid))
+                log("Job %d (%d) is finished.\n" % (job_id, sgeid))
 
             elif status == drmaa.JobState.FAILED:
                 log("Job %d (%d) failed.\n" % (job_id, sgeid))

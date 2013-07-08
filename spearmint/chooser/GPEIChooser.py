@@ -64,9 +64,7 @@ class GPEIChooser:
         self.max_ls      = 2    # top-hat prior on length scales
 
     def __del__(self):
-        log("Waiting to lock hyperparameter pickle...")
         self.locker.lock_wait(self.state_pkl)
-        log("...acquired\n")
 
         # Write the hyperparameters out to a Pickle.
         fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -85,10 +83,7 @@ class GPEIChooser:
         self.locker.unlock(self.state_pkl)
 
     def _real_init(self, dims, values):
-
-        log("Waiting to lock hyperparameter pickle...")
         self.locker.lock_wait(self.state_pkl)
-        log("...acquired\n")
 
         if os.path.exists(self.state_pkl):
             fh    = open(self.state_pkl, 'r')

@@ -1,7 +1,7 @@
 ##
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-# 
-# This code is written for research and educational purposes only to 
+#
+# This code is written for research and educational purposes only to
 # supplement the paper entitled
 # "Practical Bayesian Optimization of Machine Learning Algorithms"
 # by Snoek, Larochelle and Adams
@@ -11,12 +11,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
@@ -33,7 +33,8 @@ import scipy.optimize as spo
 import cPickle
 import multiprocessing
 
-from Locker import *
+from helpers import *
+from Locker  import *
 
 def optimize_pt(c, b, comp, pend, vals, model):
     ret = spo.fmin_l_bfgs_b(model.grad_optimize_ei_over_hypers,
@@ -53,13 +54,13 @@ Gaussian process hyperparameters.
 """
 class GPEIOptChooser:
 
-    def __init__(self, expt_dir, covar="Matern52", mcmc_iters=10, 
+    def __init__(self, expt_dir, covar="Matern52", mcmc_iters=10,
                  pending_samples=100, noiseless=False, burnin=100,
                  grid_subset=20):
         self.cov_func        = getattr(gp, covar)
         self.locker          = Locker()
         self.state_pkl       = os.path.join(expt_dir, self.__module__ + ".pkl")
-        self.stats_file      = os.path.join(expt_dir, 
+        self.stats_file      = os.path.join(expt_dir,
                                    self.__module__ + "_hyperparameters.txt")
         self.mcmc_iters      = int(mcmc_iters)
         self.burnin          = int(burnin)
@@ -77,9 +78,7 @@ class GPEIOptChooser:
         self.max_ls      = 10    # top-hat prior on length scales
 
     def dump_hypers(self):
-        sys.stderr.write("Waiting to lock hyperparameter pickle...")
         self.locker.lock_wait(self.state_pkl)
-        sys.stderr.write("...acquired\n")
 
         # Write the hyperparameters out to a Pickle.
         fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -99,7 +98,7 @@ class GPEIOptChooser:
 
         # Write the hyperparameters out to a human readable file as well
         fh    = open(self.stats_file, 'w')
-        fh.write('Mean Noise Amplitude <length scales>\n')        
+        fh.write('Mean Noise Amplitude <length scales>\n')
         fh.write('-----------ALL SAMPLES-------------\n')
         meanhyps = 0*np.hstack(self.hyper_samples[0])
         for i in self.hyper_samples:
@@ -109,16 +108,14 @@ class GPEIOptChooser:
                 fh.write(str(j) + ' ')
             fh.write('\n')
 
-        fh.write('-----------MEAN OF SAMPLES-------------\n')        
+        fh.write('-----------MEAN OF SAMPLES-------------\n')
         for j in meanhyps:
             fh.write(str(j) + ' ')
         fh.write('\n')
         fh.close()
-            
-    def _real_init(self, dims, values):        
-        sys.stderr.write("Waiting to lock hyperparameter pickle...")
+
+    def _real_init(self, dims, values):
         self.locker.lock_wait(self.state_pkl)
-        sys.stderr.write("...acquired\n")
 
         self.randomstate = npr.get_state()
         if os.path.exists(self.state_pkl):
@@ -149,16 +146,16 @@ class GPEIOptChooser:
 
             # Initial mean.
             self.mean = np.mean(values)
-            
+
             # Save hyperparameter samples
-            self.hyper_samples.append((self.mean, self.noise, self.amp2, 
+            self.hyper_samples.append((self.mean, self.noise, self.amp2,
                                        self.ls))
 
         self.locker.unlock(self.state_pkl)
 
     def cov(self, x1, x2=None):
         if x2 is None:
-            return self.amp2 * (self.cov_func(self.ls, x1, None) 
+            return self.amp2 * (self.cov_func(self.ls, x1, None)
                                + 1e-6*np.eye(x1.shape[0]))
         else:
             return self.amp2 * self.cov_func(self.ls, x1, x2)
@@ -176,7 +173,7 @@ class GPEIOptChooser:
         # Perform the real initialization.
         if self.D == -1:
             self._real_init(grid.shape[1], values[complete])
-    
+
         # Grab out the relevant sets.
         comp = grid[complete,:]
         cand = grid[candidates,:]
@@ -186,7 +183,7 @@ class GPEIOptChooser:
 
         # Spray a set of candidates around the min so far
         best_comp = np.argmin(vals)
-        cand2 = np.vstack((np.random.randn(10,comp.shape[1])*0.001 + 
+        cand2 = np.vstack((np.random.randn(10,comp.shape[1])*0.001 +
                            comp[best_comp,:], cand))
 
         if self.mcmc_iters > 0:
@@ -195,10 +192,10 @@ class GPEIOptChooser:
             if self.needs_burnin:
                 for mcmc_iter in xrange(self.burnin):
                     self.sample_hypers(comp, vals)
-                    sys.stderr.write("BURN %d/%d] mean: %.2f  amp: %.2f "
+                    log("BURN %d/%d] mean: %.2f  amp: %.2f "
                                      "noise: %.4f  min_ls: %.4f  max_ls: %.4f\n"
-                                     % (mcmc_iter+1, self.burnin, self.mean, 
-                                        np.sqrt(self.amp2), self.noise, 
+                                     % (mcmc_iter+1, self.burnin, self.mean,
+                                        np.sqrt(self.amp2), self.noise,
                                         np.min(self.ls), np.max(self.ls)))
                 self.needs_burnin = False
 
@@ -207,17 +204,17 @@ class GPEIOptChooser:
             self.hyper_samples = []
             for mcmc_iter in xrange(self.mcmc_iters):
                 self.sample_hypers(comp, vals)
-                sys.stderr.write("%d/%d] mean: %.2f  amp: %.2f  noise: %.4f "
+                log("%d/%d] mean: %.2f  amp: %.2f  noise: %.4f "
                                  "min_ls: %.4f  max_ls: %.4f\n"
                                  % (mcmc_iter+1, self.mcmc_iters, self.mean,
                                     np.sqrt(self.amp2), self.noise,
-                                    np.min(self.ls), np.max(self.ls)))            
+                                    np.min(self.ls), np.max(self.ls)))
             self.dump_hypers()
 
             b = []# optimization bounds
             for i in xrange(0, cand.shape[1]):
                 b.append((0, 1))
-                    
+
             overall_ei = self.ei_over_hypers(comp,pend,cand2,vals)
             inds = np.argsort(np.mean(overall_ei,axis=1))[-self.grid_subset:]
             cand2 = cand2[inds,:]
@@ -225,7 +222,7 @@ class GPEIOptChooser:
             # This is old code to optimize each point in parallel. Uncomment
             # and replace if multiprocessing doesn't work
             #for i in xrange(0, cand2.shape[0]):
-            #    sys.stderr.write("Optimizing candidate %d/%d\n" %
+            #    log("Optimizing candidate %d/%d\n" %
             #                     (i+1, cand2.shape[0]))
             #self.check_grad_ei(cand2[i,:].flatten(), comp, pend, vals)
             #    ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
@@ -242,10 +239,10 @@ class GPEIOptChooser:
             for res in results:
                 cand = np.vstack((cand, res.get(1e8)))
             pool.close()
-            
+
             overall_ei = self.ei_over_hypers(comp,pend,cand,vals)
             best_cand = np.argmax(np.mean(overall_ei, axis=1))
-            
+
             if (best_cand >= numcand):
                 return (int(numcand), cand[best_cand,:])
 
@@ -255,13 +252,13 @@ class GPEIOptChooser:
             # Optimize hyperparameters
             self.optimize_hypers(comp, vals)
 
-            sys.stderr.write("mean: %.2f  amp: %.2f  noise: %.4f  "
+            log("mean: %.2f  amp: %.2f  noise: %.4f  "
                              "min_ls: %.4f  max_ls: %.4f\n"
                              % (self.mean, np.sqrt(self.amp2), self.noise,
                                 np.min(self.ls), np.max(self.ls)))
 
             # Optimize over EI
-            b = []# optimization bounds                                        
+            b = []# optimization bounds
             for i in xrange(0, cand.shape[1]):
                 b.append((0, 1))
 
@@ -345,7 +342,7 @@ class GPEIOptChooser:
         if pend.shape[0] == 0:
             best = np.min(vals)
             cand = np.reshape(cand, (-1, comp.shape[1]))
-        
+
             # The primary covariances for prediction.
             comp_cov   = self.cov(comp)
             cand_cross = self.cov(comp, cand)
@@ -353,15 +350,15 @@ class GPEIOptChooser:
             # Compute the required Cholesky.
             obsv_cov  = comp_cov + self.noise*np.eye(comp.shape[0])
             obsv_chol = spla.cholesky(obsv_cov, lower=True)
-        
+
             cov_grad_func = getattr(gp, 'grad_' + self.cov_func.__name__)
             cand_cross_grad = cov_grad_func(self.ls, comp, cand)
-        
+
             # Predictive things.
             # Solve the linear systems.
             alpha  = spla.cho_solve((obsv_chol, True), vals - self.mean)
             beta   = spla.solve_triangular(obsv_chol, cand_cross, lower=True)
-    
+
             # Predict the marginal means and variances at candidates.
             func_m = np.dot(cand_cross.T, alpha) + self.mean
             func_v = self.amp2*(1+1e-6) - np.sum(beta**2, axis=0)
@@ -379,14 +376,14 @@ class GPEIOptChooser:
             # Gradients of ei w.r.t. mean and variance
             g_ei_m = -ncdf
             g_ei_s2 = 0.5*npdf / func_s
-            
+
             # Apply covariance function
             grad_cross = np.squeeze(cand_cross_grad)
-        
+
             grad_xp_m = np.dot(alpha.transpose(),grad_cross)
             grad_xp_v = np.dot(-2*spla.cho_solve(
                     (obsv_chol, True),cand_cross).transpose(), grad_cross)
-            
+
             grad_xp = 0.5*self.amp2*(grad_xp_m*g_ei_m + grad_xp_v*g_ei_s2)
             ei = -np.sum(ei)
 
@@ -400,7 +397,7 @@ class GPEIOptChooser:
             comp_pend = np.concatenate((comp, pend))
 
             # Compute the covariance and Cholesky decomposition.
-            comp_pend_cov  = (self.cov(comp_pend) + 
+            comp_pend_cov  = (self.cov(comp_pend) +
                               self.noise*np.eye(comp_pend.shape[0]))
             comp_pend_chol = spla.cholesky(comp_pend_cov, lower=True)
 
@@ -428,7 +425,7 @@ class GPEIOptChooser:
 
             # Include the fantasies.
             fant_vals = np.concatenate(
-                (np.tile(vals[:,np.newaxis], 
+                (np.tile(vals[:,np.newaxis],
                          (1,self.pending_samples)), pend_fant))
 
             # Compute bests over the fantasies.
@@ -440,7 +437,7 @@ class GPEIOptChooser:
             cand_cross_grad = cov_grad_func(self.ls, comp_pend, cand)
 
             # Solve the linear systems.
-            alpha  = spla.cho_solve((comp_pend_chol, True), 
+            alpha  = spla.cho_solve((comp_pend_chol, True),
                                     fant_vals - self.mean)
             beta   = spla.solve_triangular(comp_pend_chol, cand_cross,
                                            lower=True)
@@ -456,13 +453,13 @@ class GPEIOptChooser:
             npdf   = sps.norm.pdf(u)
             ei     = func_s*( u*ncdf + npdf)
 
-            # Gradients of ei w.r.t. mean and variance            
+            # Gradients of ei w.r.t. mean and variance
             g_ei_m = -ncdf
             g_ei_s2 = 0.5*npdf / func_s
-            
+
             # Apply covariance function
             grad_cross = np.squeeze(cand_cross_grad)
-        
+
             grad_xp_m = np.dot(alpha.transpose(),grad_cross)
             grad_xp_v = np.dot(-2*spla.cho_solve(
                     (comp_pend_chol, True),cand_cross).transpose(), grad_cross)
@@ -473,9 +470,9 @@ class GPEIOptChooser:
 
             return ei, grad_xp.flatten()
 
-    def compute_ei(self, comp, pend, cand, vals):        
+    def compute_ei(self, comp, pend, cand, vals):
         if pend.shape[0] == 0:
-            # If there are no pending, don't do anything fancy.            
+            # If there are no pending, don't do anything fancy.
 
             # Current best.
             best = np.min(vals)
@@ -511,7 +508,7 @@ class GPEIOptChooser:
             comp_pend = np.concatenate((comp, pend))
 
             # Compute the covariance and Cholesky decomposition.
-            comp_pend_cov  = (self.cov(comp_pend) + 
+            comp_pend_cov  = (self.cov(comp_pend) +
                               self.noise*np.eye(comp_pend.shape[0]))
             comp_pend_chol = spla.cholesky(comp_pend_cov, lower=True)
 
@@ -539,7 +536,7 @@ class GPEIOptChooser:
 
             # Include the fantasies.
             fant_vals = np.concatenate(
-                (np.tile(vals[:,np.newaxis], 
+                (np.tile(vals[:,np.newaxis],
                          (1,self.pending_samples)), pend_fant))
 
             # Compute bests over the fantasies.
@@ -549,7 +546,7 @@ class GPEIOptChooser:
             cand_cross = self.cov(comp_pend, cand)
 
             # Solve the linear systems.
-            alpha  = spla.cho_solve((comp_pend_chol, True), 
+            alpha  = spla.cho_solve((comp_pend_chol, True),
                                     fant_vals - self.mean)
             beta   = spla.solve_triangular(comp_pend_chol, cand_cross,
                                            lower=True)
@@ -580,12 +577,12 @@ class GPEIOptChooser:
         def logprob(ls):
             if np.any(ls < 0) or np.any(ls > self.max_ls):
                 return -np.inf
-            
-            cov   = (self.amp2 * (self.cov_func(ls, comp, None) + 
+
+            cov   = (self.amp2 * (self.cov_func(ls, comp, None) +
                 1e-6*np.eye(comp.shape[0])) + self.noise*np.eye(comp.shape[0]))
             chol  = spla.cholesky(cov, lower=True)
             solve = spla.cho_solve((chol, True), vals - self.mean)
-            lp    = (-np.sum(np.log(np.diag(chol))) - 
+            lp    = (-np.sum(np.log(np.diag(chol))) -
                       0.5*np.dot(vals-self.mean, solve))
             return lp
 
@@ -603,7 +600,7 @@ class GPEIOptChooser:
 
             if amp2 < 0 or noise < 0:
                 return -np.inf
-            
+
             cov   = (amp2 * (self.cov_func(self.ls, comp, None) +
                 1e-6*np.eye(comp.shape[0])) + noise*np.eye(comp.shape[0]))
             chol  = spla.cholesky(cov, lower=True)
@@ -636,7 +633,7 @@ class GPEIOptChooser:
 
             if amp2 < 0:
                 return -np.inf
-            
+
             cov   = (amp2 * (self.cov_func(self.ls, comp, None) +
                 1e-6*np.eye(comp.shape[0])) + noise*np.eye(comp.shape[0]))
             chol  = spla.cholesky(cov, lower=True)
@@ -653,7 +650,7 @@ class GPEIOptChooser:
         self.mean  = hypers[0]
         self.amp2  = hypers[1]
         self.noise = 1e-3
-    
+
     def optimize_hypers(self, comp, vals):
         mygp = gp.GP(self.cov_func.__name__)
         mygp.real_init(comp.shape[1], vals)
@@ -662,9 +659,9 @@ class GPEIOptChooser:
         self.ls = mygp.ls
         self.amp2 = mygp.amp2
         self.noise = mygp.noise
-        
+
         # Save hyperparameter samples
         self.hyper_samples.append((self.mean, self.noise, self.amp2, self.ls))
         self.dump_hypers()
-        
+
         return
