@@ -29,9 +29,15 @@ import importlib
 import time
 import imp
 import os
+import sys
 import re
-import Locker
 
+# TODO: this shouldn't be necessary when the project is installed like a normal
+# python lib.  For now though, this lets you symlink to supermint from your path and run it
+# from anywhere.
+sys.path.append(os.path.realpath(__file__))
+
+import Locker
 from ExperimentGrid  import *
 from helpers         import *
 from runner          import job_runner
