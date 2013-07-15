@@ -20,6 +20,7 @@ enum Language {
  PYTHON = 2;
  SHELL  = 3;
  MCR    = 4;
+ TORCH  = 5;
 }
 
 message Parameter {
@@ -42,7 +43,7 @@ message Experiment {
   repeated string options = 4;
   optional double min     = 5;
   optional double max     = 6;
-  
+
   enum Type {
    INT   = 1;
    FLOAT = 2;

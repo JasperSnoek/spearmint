@@ -33,5 +33,4 @@ class LocalDriver(DispatchDriver):
         return True
 
 def init():
-    print "local driver!"
     return LocalDriver()

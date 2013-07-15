@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.7
-
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
 #
 # This code is written for research and educational purposes only to
@@ -60,7 +58,7 @@ from runner          import job_runner
 
 
 def parse_args():
-    parser = optparse.OptionParser(usage="usage: %prog [options] directory")
+    parser = optparse.OptionParser(usage="usage: %prog [options] config.pb")
 
     parser.add_option("--max-concurrent", dest="max_concurrent",
                       help="Maximum number of concurrent jobs.",
@@ -91,6 +89,11 @@ def parse_args():
     parser.add_option("--polling-time", dest="polling_time",
                       help="The time in-between successive polls for results.",
                       type="float", default=3.0)
+
+    if len(sys.argv) < 2:
+        parser.print_help()
+        sys.exit(0)
+
 
     (options, args) = parser.parse_args()
 

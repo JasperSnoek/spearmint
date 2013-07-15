@@ -1,5 +1,6 @@
 import sys
 import os
+import traceback
 
 from spearmint_pb2   import *
 from ExperimentGrid  import *
@@ -39,7 +40,7 @@ def job_runner(job):
     try:
         if job.language == MATLAB:   run_matlab_job(job)
         elif job.language == PYTHON: run_python_job(job)
-        elif job.language == SHELL:  run_shell_job(job)
+        elif job.language == SHELL:  run_torch_job(job)
         elif job.language == MCR:    run_mcr_job(job)
         else:
             raise Exception("That function type has not been implemented.")
@@ -47,8 +48,9 @@ def job_runner(job):
         success = True
     except:
         log("-" * 40 + "\n")
-        log("Problem executing the function:\n")
-        print sys.exc_info()
+        log("Problem running the job:\n")
+        log(sys.exc_info())
+        log("-" * 40 + "\n")
 
     end_time = time.time()
     duration = end_time - start_time
@@ -105,12 +107,8 @@ def run_python_job(job):
 
     log("Running python job.\n")
 
-    # Add directory to the system path.
+    # Add experiment directory to the system path.
     sys.path.append(os.path.realpath(job.expt_dir))
-
-    # Change into the directory.
-    os.chdir(job.expt_dir)
-    log("Changed into dir %s\n" % (os.getcwd()))
 
     # Convert the PB object into useful parameters.
     params = {}
@@ -134,12 +132,44 @@ def run_python_job(job):
 
     log("Got result %f\n" % (result))
 
-    # Change back out.
-    os.chdir('..')
-
     # Store the result.
     job.value = result
     save_job(job)
+
+
+def run_torch_job(job):
+    '''Run a torch based job.'''
+
+    params = {}
+    for param in job.param:
+        dbl_vals = param.dbl_val._values
+        int_vals = param.int_val._values
+        str_vals = param.str_val._values
+
+        if len(dbl_vals) > 0:
+            params[param.name] = dbl_vals
+        elif len(int_vals) > 0:
+            params[param.name] = int_vals
+        elif len(str_vals) > 0:
+            params[param.name] = str_vals
+        else:
+            raise Exception("Unknown parameter type.")
+
+    #TODO: this passes args correctly for experiment utils, but we need to
+    # figure out how to get the result back out when the experiment completes.
+
+    param_str = ""
+    for pname, pval in params.iteritems():
+        if len(pval) == 1:
+            pval = str(pval[0])
+        else:
+            pval = ','.join([str(v) for v in pval])
+
+        param_str += "-" + pname + " " + pval + " "
+
+    cmd = "./%s %s" % (job.name, param_str)
+    log("Executing command: %s\n" % (cmd))
+    sh(cmd)
 
 
 def run_shell_job(job):
