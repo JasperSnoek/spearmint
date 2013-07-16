@@ -6,5 +6,7 @@ A more difficult global optimization test function, this function has 6 local mi
 
 ### Global optimium
 
+    f(x,y) = −1.0316
+
     X = -0.898  (0.898)
     Y = 0.7126  (-0.7126)
