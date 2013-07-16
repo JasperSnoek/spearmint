@@ -30,25 +30,22 @@ def check_dir(path):
         os.mkdir(path)
 
 
-def job_file_for(job):
-    '''Get the path to the job file corresponding to a job object.'''
-    return os.path.join(job.expt_dir, 'jobs', '%08d.pb' % (job.id))
-
-
 def grid_for(job):
     return os.path.join(job.expt_dir, 'expt-grid.pkl')
 
 
-def job_output_file(job):
-    return os.path.join(job.expt_dir, 'output', '%08d.out' % (job.id))
+
+def file_write_safe(path, data):
+    '''Write data to a temporary file, then move to the destination path.'''
+    fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
+    fh.write(data)
+    fh.close()
+    cmd = 'mv "%s" "%s"' % (fh.name, path)
+    sh(cmd)
 
 
 def save_expt(filename, expt):
-    fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
-    fh.write(text_format.MessageToString(expt))
-    fh.close()
-    cmd = 'mv "%s" "%s"' % (fh.name, filename)
-    sh(cmd)
+    file_write_safe(filename, text_format.MessageToString(expt))
 
 
 def load_expt(filename):
@@ -59,14 +56,18 @@ def load_expt(filename):
     return expt
 
 
-def save_job(job):
-    fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
-    fh.write(job.SerializeToString())
-    fh.close()
+def job_output_file(job):
+    return os.path.join(job.expt_dir, 'output', '%08d.out' % (job.id))
 
-    job_file = job_file_for(job)
-    cmd = 'mv "%s" "%s"' % (fh.name, job_file)
-    sh(cmd)
+
+def job_file_for(job):
+    '''Get the path to the job file corresponding to a job object.'''
+    return os.path.join(job.expt_dir, 'jobs', '%08d.pb' % (job.id))
+
+
+def save_job(job):
+    filename = job_file_for(job)
+    file_write_safe(filename, job.SerializeToString())
 
 
 def load_job(filename):
@@ -75,5 +76,4 @@ def load_job(filename):
     job.ParseFromString(fh.read())
     fh.close()
     return job
-
 

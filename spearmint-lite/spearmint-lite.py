@@ -1,21 +1,21 @@
 ##
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-#                                                                                                                                                                              
+#
 # This code is written for research and educational purposes only to
 # supplement the paper entitled "Practical Bayesian Optimization of
 # Machine Learning Algorithms" by Snoek, Larochelle and Adams Advances
 # in Neural Information Processing Systems, 2012
-#                                                                                                                                                       
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#                                                                                                                                                                       
+#
 # This program is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
-#                                                                                                                                                                       
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see
 # <http://www.gnu.org/licenses/>.
@@ -81,7 +81,7 @@ def main():
 
     # Otherwise run in controller mode.
     main_controller(options, args)
-    
+
 ##############################################################################
 ##############################################################################
 def main_controller(options, args):
@@ -151,10 +151,10 @@ def main_controller(options, args):
                     values = float(val)
                     complete = np.matrix(variables)
                     durations = float(dur)
-                
+
         infile.close()
         # Some stats
-        sys.stderr.write("#Complete: %d #Pending: %d\n" % 
+        sys.stderr.write("#Complete: %d #Pending: %d\n" %
                          (complete.shape[0], pending.shape[0]))
 
         # Let's print out the best value so far
@@ -162,7 +162,7 @@ def main_controller(options, args):
             best_val = np.min(values)
             best_job = np.argmin(values)
             sys.stderr.write("Current best: %f (job %d)\n" % (best_val, best_job))
-    
+
         # Now lets get the next job to run
         # First throw out a set of candidates on the unit hypercube
         # Increment by the number of observed so we don't take the
@@ -173,7 +173,7 @@ def main_controller(options, args):
 
         # Ask the chooser to actually pick one.
         # First mash the data into a format that matches that of the other
-        # spearmint drivers to pass to the chooser modules.        
+        # spearmint drivers to pass to the chooser modules.
         grid = candidates
         if (complete.shape[0] > 0):
             grid = np.vstack((complete, candidates))
@@ -187,7 +187,7 @@ def main_controller(options, args):
                               np.nonzero(grid_idx == 1)[0],
                               np.nonzero(grid_idx == 2)[0],
                               np.nonzero(grid_idx == 0)[0])
-        
+
         # If the job_id is a tuple, then the chooser picked a new job not from
         # the candidate list
         if isinstance(job_id, tuple):
@@ -207,11 +207,11 @@ def main_controller(options, args):
         output = ""
         for p in params:
             output = output + str(p) + " "
-            
+
         output = "P P " + output + "\n"
         outfile = open(res_file,"a")
         outfile.write(output)
-        outfile.close()        
+        outfile.close()
 
 # And that's it
 if __name__ == '__main__':

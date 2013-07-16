@@ -30,6 +30,10 @@ import os
 import sys
 import re
 
+try: import simplejson as json
+except ImportError: import json
+
+
 # TODO: this shouldn't be necessary when the project is installed like a normal
 # python lib.  For now though, this lets you symlink to supermint from your path and run it
 # from anywhere.
@@ -126,8 +130,7 @@ def main():
     driver = module.init()
 
     # Loop until we run out of jobs.
-    while True:
-        attempt_dispatch(expt_name, expt_dir, chooser, driver, options)
+    while attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
         # This is polling frequency. A higher frequency means that the algorithm
         # picks up results more quickly after they finish, but also significantly
         # increases overhead.
@@ -189,21 +192,25 @@ def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
     if n_complete >= options.max_finished_jobs:
         log("Maximum number of finished jobs (%d) reached."
                          "Exiting\n" % options.max_finished_jobs)
-        sys.exit(0)
+        return False
 
     if n_candidates == 0:
         log("There are no candidates left.  Exiting.\n")
-        sys.exit(0)
+        return False
 
     if n_pending >= options.max_concurrent:
         log("Maximum number of jobs (%d) pending.\n" % (options.max_concurrent))
+        return True
 
     else:
 
         # start a bunch of candidate jobs if possible
-        #for i in range(min(options.max_concurrent - n_pending, n_candidates)):
+        #to_start = min(options.max_concurrent - n_pending, n_candidates)
+        #log("Trying to start %d jobs\n" % (to_start))
+        #for i in xrange(to_start):
 
         # Ask the chooser to pick the next candidate
+        log("Choosing next candidate... ")
         job_id = chooser.next(grid, values, durations, candidates, pending, complete)
 
         # If the job_id is a tuple, then the chooser picked a new job.
@@ -212,7 +219,7 @@ def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
             (job_id, candidate) = job_id
             job_id = expt_grid.add_to_grid(candidate)
 
-        log("Selected job %d from the grid... " % (job_id))
+        log("selected job %d from the grid.\n" % (job_id))
 
         # Convert this back into an interpretable job and add metadata.
         job = Job()
@@ -234,7 +241,7 @@ def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
             log("Deleting job file.\n")
             os.unlink(job_file_for(job))
 
-    return
+    return True
 
 
 def write_trace(expt_dir, best_val, best_job,
