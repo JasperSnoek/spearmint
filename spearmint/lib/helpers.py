@@ -44,11 +44,11 @@ def file_write_safe(path, data):
     sh(cmd)
 
 
-def save_expt(filename, expt):
+def save_experiment(filename, expt):
     file_write_safe(filename, text_format.MessageToString(expt))
 
 
-def load_expt(filename):
+def load_experiment(filename):
     fh = open(filename, 'rb')
     expt = Experiment()
     text_format.Merge(fh.read(), expt)

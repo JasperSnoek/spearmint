@@ -1,0 +1,39 @@
+<!doctype html>
+<head>
+    <script type="text/javascript" src="/static/js/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
+
+    <style type="text/css">
+        path {
+            stroke: steelblue;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        line {
+            stroke: black;
+        }
+
+        text {
+            font-family: Arial;
+            font-size: 9pt;
+        }
+    </style>
+
+    <title>Spearmint - Experiment Monitor</title>
+</head>
+<body>
+<div id='container'>
+    <div id='header'>
+        <h2>Spearmint - Bayesian Optimizer</h2>
+    <div id='status'></div>
+    <div id='result-chart'></div>
+</div>
+<script>
+    var REFRESH_RATE = 5000;
+    function load_status() {
+        $('#status').load('/status');
+    }
+    var refresher = setInterval(load_status, REFRESH_RATE);
+</script>
+</body>

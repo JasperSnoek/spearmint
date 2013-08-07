@@ -21,7 +21,6 @@
 import optparse
 import tempfile
 import datetime
-import subprocess
 import multiprocessing
 import importlib
 import time
@@ -93,6 +92,9 @@ def parse_args():
     parser.add_option("--polling-time", dest="polling_time",
                       help="The time in-between successive polls for results.",
                       type="float", default=3.0)
+    parser.add_option("--web-status", default=False,
+                     help="Serve the experiment status web page.",
+                      dest="web_status")
 
     if len(sys.argv) < 2:
         parser.print_help()
@@ -114,9 +116,16 @@ def main():
     expt_dir  = os.path.dirname(os.path.realpath(args[0]))
     expt_name = os.path.basename(expt_dir)
 
+    # Start the web view in a separate process
+    if options.web_status:
+        from web.status import app
+        app.set_experiment_dir(expt_dir)
+        proc = multiprocessing.Process(target=app.run, args=[])
+        proc.start()
+
     if not os.path.exists(expt_dir):
         log("Cannot find experiment directory '%s'. "
-                         "Aborting.\n" % (expt_dir))
+            "Aborting.\n" % (expt_dir))
         sys.exit(-1)
 
     check_experiment_dirs(expt_dir)
@@ -146,7 +155,7 @@ def attempt_dispatch(expt_name, expt_dir, chooser, driver, options):
     log("\n")
 
     expt_file = os.path.join(expt_dir, options.config_file)
-    expt      = load_expt(expt_file)
+    expt      = load_experiment(expt_file)
 
     # Build the experiment grid.
     expt_grid = ExperimentGrid(expt_dir,
