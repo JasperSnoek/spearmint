@@ -13,5 +13,5 @@ while [ -h "$SOURCE" ]; do
 done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
-CMD="python ${DIR}/lib/spearmint.py $@"
-PYTHONPATH=${DIR}/lib ${CMD}
+CMD="python ${DIR}/../spearmint/main.py $@"
+PYTHONPATH=${DIR}/../spearmint ${CMD}

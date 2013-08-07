@@ -92,8 +92,8 @@ def parse_args():
     parser.add_option("--polling-time", dest="polling_time",
                       help="The time in-between successive polls for results.",
                       type="float", default=3.0)
-    parser.add_option("--web-status", default=False,
-                     help="Serve the experiment status web page.",
+    parser.add_option("--web-status", action="store_true",
+                     help="Serve an experiment status web page.",
                       dest="web_status")
 
     if len(sys.argv) < 2:
