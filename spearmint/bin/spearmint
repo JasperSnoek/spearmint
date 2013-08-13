@@ -14,4 +14,4 @@ done
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 CMD="python ${DIR}/../spearmint/main.py $@"
-PYTHONPATH=${DIR}/../spearmint ${CMD}
+PYTHONPATH=${DIR}/.. ${CMD}

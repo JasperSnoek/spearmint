@@ -28,8 +28,7 @@ def job_runner(job):
 
     ExperimentGrid.job_running(job.expt_dir, job.id)
 
-    # Update metadata and save the job file, which will be read by the job
-    # wrappers.
+    # Update metadata and save the job file, which will be read by the job wrappers.
     job.start_t = int(time.time())
     job.status  = 'running'
     save_job(job)
@@ -47,10 +46,10 @@ def job_runner(job):
 
         success = True
     except:
-        log("-" * 40 + "\n")
-        log("Problem running the job:\n")
+        log("-" * 40)
+        log("Problem running the job:")
         log(sys.exc_info())
-        log("-" * 40 + "\n")
+        log("-" * 40)
 
     end_time = time.time()
     duration = end_time - start_time
@@ -60,14 +59,14 @@ def job_runner(job):
     job_file = job_file_for(job)
     job      = load_job(job_file)
 
-    log("Job file reloaded.\n")
+    log("Job file reloaded.")
 
     if not job.HasField("value"):
-        log("Could not find value in output file.\n")
+        log("Could not find value in output file.")
         success = False
 
     if success:
-        log("Completed successfully in %0.2f seconds. [%f]\n"
+        log("Completed successfully in %0.2f seconds. [%f]"
                          % (duration, job.value))
 
         # Update the status for this job.
@@ -75,7 +74,7 @@ def job_runner(job):
                                     job.value, duration)
         job.status = 'complete'
     else:
-        log("Job failed in %0.2f seconds.\n" % (duration))
+        log("Job failed in %0.2f seconds." % (duration))
 
         # Update the experiment status for this job.
         ExperimentGrid.job_broken(job.expt_dir, job.id)
@@ -90,13 +89,13 @@ def job_runner(job):
 def run_matlab_job(job):
     '''Run it as a Matlab function.'''
 
-    log("Running matlab job.\n")
+    log("Running matlab job.")
 
     job_file      = job_file_for(job)
     function_call = "matlab_wrapper('%s'),quit;" % (job_file)
     matlab_cmd    = ('matlab -nosplash -nodesktop -r "%s"' %
                      (function_call))
-    log(matlab_cmd + "\n")
+    log(matlab_cmd)
     sh(matlab_cmd)
 
 

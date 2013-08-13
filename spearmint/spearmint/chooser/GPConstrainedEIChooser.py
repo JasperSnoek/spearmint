@@ -99,9 +99,7 @@ class GPConstrainedEIChooser:
     # A simple function to dump out hyperparameters to allow for a hot start
     # if the optimization is restarted.
     def dump_hypers(self):
-        #log("Waiting to lock hyperparameter pickle...")
         self.locker.lock_wait(self.state_pkl)
-        #log("...acquired\n")
 
         # Write the hyperparameters out to a Pickle.
         fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -143,9 +141,7 @@ class GPConstrainedEIChooser:
 
     def _real_init(self, dims, values, durations):
 
-        #log("Waiting to lock hyperparameter pickle...")
         self.locker.lock_wait(self.state_pkl)
-        #log("...acquired\n")
 
         self.randomstate = npr.get_state()
         if os.path.exists(self.state_pkl):
@@ -257,7 +253,7 @@ class GPConstrainedEIChooser:
                     self.sample_constraint_hypers(comp, labels)
                     self.sample_hypers(comp[goodvals,:], vals[goodvals])
                     log("BURN %d/%d] mean: %.2f  amp: %.2f "
-                                     "noise: %.4f  min_ls: %.4f  max_ls: %.4f\n"
+                                     "noise: %.4f  min_ls: %.4f  max_ls: %.4f"
                                      % (mcmc_iter+1, self.burnin, self.mean,
                                         np.sqrt(self.amp2), self.noise,
                                         np.min(self.ls), np.max(self.ls)))
@@ -271,7 +267,7 @@ class GPConstrainedEIChooser:
                 self.sample_hypers(comp[goodvals,:], vals[goodvals])
                 if self.verbosity > 0:
                     log("%d/%d] mean: %.2f  amp: %.2f noise: %.4f "
-                                     "min_ls: %.4f  max_ls: %.4f\n"
+                                     "min_ls: %.4f  max_ls: %.4f"
                                      % (mcmc_iter+1, self.mcmc_iters, self.mean,
                                         np.sqrt(self.amp2), self.noise,
                                         np.min(self.ls), np.max(self.ls)))
@@ -281,7 +277,7 @@ class GPConstrainedEIChooser:
                                      "constraint_gain: %.4f "
                                      "constraint_min_ls: %.4f "
                                      "constraint_max_ls: "
-                                     "%.4f\n"
+                                     "%.4f"
                                      % (mcmc_iter+1, self.mcmc_iters,
                                         self.constraint_mean,
                                         np.sqrt(self.constraint_amp2),

@@ -38,6 +38,8 @@ RUNNING_STATE   = 2
 COMPLETE_STATE  = 3
 BROKEN_STATE    = -1
 
+EXPERIMENT_GRID_FILE = 'expt-grid.pkl'
+
 class ExperimentGrid:
 
     @staticmethod
@@ -47,8 +49,10 @@ class ExperimentGrid:
 
     @staticmethod
     def job_complete(expt_dir, id, value, duration):
+        log("setting job %d complete" % id)
         expt_grid = ExperimentGrid(expt_dir)
         expt_grid.set_complete(id, value, duration)
+        log("set...")
 
     @staticmethod
     def job_broken(expt_dir, id):
@@ -57,18 +61,14 @@ class ExperimentGrid:
 
     def __init__(self, expt_dir, variables=None, grid_size=None, grid_seed=1):
         self.expt_dir = expt_dir
-        self.jobs_pkl = os.path.join(expt_dir, 'expt-grid.pkl')
+        self.jobs_pkl = os.path.join(expt_dir, EXPERIMENT_GRID_FILE)
         self.locker   = Locker()
 
-        # Only one process at a time is allowed to have access to this.
-        #log("Waiting to lock grid...")
+        # Only one process at a time is allowed to have access to the grid.
         self.locker.lock_wait(self.jobs_pkl)
-        #log("...acquired\n")
 
-        # Does this exist already?
+        # Set up the grid for the first time if it doesn't exist.
         if variables is not None and not os.path.exists(self.jobs_pkl):
-
-            # Set up the grid for the first time.
             self.seed     = grid_seed
             self.vmap     = GridMap(variables, grid_size)
             self.grid     = self._hypercube_grid(self.vmap.card(), grid_size)
@@ -76,19 +76,17 @@ class ExperimentGrid:
             self.values   = np.zeros(grid_size) + np.nan
             self.durs     = np.zeros(grid_size) + np.nan
             self.proc_ids = np.zeros(grid_size, dtype=int)
-
-            # Save this out.
             self._save_jobs()
-        else:
 
-            # Load in from the pickle.
+        # Or load in the grid from the pickled file.
+        else:
             self._load_jobs()
+
 
     def __del__(self):
         self._save_jobs()
         if self.locker.unlock(self.jobs_pkl):
             pass
-            #log("Released lock on job grid.\n")
         else:
             raise Exception("Could not release lock on job grid.\n")
 

@@ -145,7 +145,7 @@ class GPEIChooser:
             for mcmc_iter in xrange(self.mcmc_iters):
 
                 self.sample_hypers(comp, vals)
-                log("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f\n"
+                log("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f"
                                  % (self.mean, np.sqrt(self.amp2), self.noise, np.min(self.ls), np.max(self.ls)))
 
                 overall_ei[:,mcmc_iter] = self.compute_ei(comp, pend, cand, vals)
@@ -165,7 +165,7 @@ class GPEIChooser:
                 self.amp2 = np.std(vals)
                 # Initial observation noise.
                 self.noise = 1e-3
-            log("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f\n"
+            log("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f"
                              % (self.mean, np.sqrt(self.amp2), self.noise, np.min(self.ls),
                                 np.max(self.ls)))
 

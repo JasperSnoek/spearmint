@@ -193,7 +193,7 @@ class GPEIOptChooser:
                 for mcmc_iter in xrange(self.burnin):
                     self.sample_hypers(comp, vals)
                     log("BURN %d/%d] mean: %.2f  amp: %.2f "
-                                     "noise: %.4f  min_ls: %.4f  max_ls: %.4f\n"
+                                     "noise: %.4f  min_ls: %.4f  max_ls: %.4f"
                                      % (mcmc_iter+1, self.burnin, self.mean,
                                         np.sqrt(self.amp2), self.noise,
                                         np.min(self.ls), np.max(self.ls)))
@@ -205,7 +205,7 @@ class GPEIOptChooser:
             for mcmc_iter in xrange(self.mcmc_iters):
                 self.sample_hypers(comp, vals)
                 log("%d/%d] mean: %.2f  amp: %.2f  noise: %.4f "
-                                 "min_ls: %.4f  max_ls: %.4f\n"
+                                 "min_ls: %.4f  max_ls: %.4f"
                                  % (mcmc_iter+1, self.mcmc_iters, self.mean,
                                     np.sqrt(self.amp2), self.noise,
                                     np.min(self.ls), np.max(self.ls)))
@@ -222,7 +222,7 @@ class GPEIOptChooser:
             # This is old code to optimize each point in parallel. Uncomment
             # and replace if multiprocessing doesn't work
             #for i in xrange(0, cand2.shape[0]):
-            #    log("Optimizing candidate %d/%d\n" %
+            #    log("Optimizing candidate %d/%d" %
             #                     (i+1, cand2.shape[0]))
             #self.check_grad_ei(cand2[i,:].flatten(), comp, pend, vals)
             #    ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
@@ -253,7 +253,7 @@ class GPEIOptChooser:
             self.optimize_hypers(comp, vals)
 
             log("mean: %.2f  amp: %.2f  noise: %.4f  "
-                             "min_ls: %.4f  max_ls: %.4f\n"
+                             "min_ls: %.4f  max_ls: %.4f"
                              % (self.mean, np.sqrt(self.amp2), self.noise,
                                 np.min(self.ls), np.max(self.ls)))
 

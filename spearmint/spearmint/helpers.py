@@ -7,9 +7,11 @@ from google.protobuf import text_format
 from spearmint_pb2   import *
 
 
-def log(msg):
+def log(*args):
     '''Write a msg to stderr.'''
-    sys.stderr.write(msg)
+    for v in args:
+        sys.stderr.write(str(v))
+    sys.stderr.write("\n")
 
 
 def sh(cmd):
@@ -19,7 +21,7 @@ def sh(cmd):
 
 def redirect_output(path):
     '''Redirect stdout and stderr to a file.'''
-    outfile    = open(path, 'w')
+    outfile    = open(path, 'a')
     sys.stdout = outfile
     sys.stderr = outfile
 

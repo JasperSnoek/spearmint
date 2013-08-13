@@ -188,7 +188,7 @@ class GPEIperSecChooser:
                 for mcmc_iter in xrange(self.burnin):
                     self.sample_hypers(comp, vals, durs)
                     log("BURN %d/%d] mean: %.2f  amp: %.2f "
-                                     "noise: %.4f  min_ls: %.4f  max_ls: %.4f\n"
+                                     "noise: %.4f  min_ls: %.4f  max_ls: %.4f"
                                      % (mcmc_iter+1, self.burnin, self.mean,
                                         np.sqrt(self.amp2), self.noise,
                                         np.min(self.ls), np.max(self.ls)))
@@ -200,13 +200,13 @@ class GPEIperSecChooser:
             for mcmc_iter in xrange(self.mcmc_iters):
                 self.sample_hypers(comp, vals, durs)
                 log("%d/%d] mean: %.2f  amp: %.2f  noise: %.4f "
-                                 "min_ls: %.4f  max_ls: %.4f\n"
+                                 "min_ls: %.4f  max_ls: %.4f"
                                  % (mcmc_iter+1, self.mcmc_iters, self.mean,
                                     np.sqrt(self.amp2), self.noise,
                                     np.min(self.ls), np.max(self.ls)))
 
                 log("%d/%d] time_mean: %.2fs time_amp: %.2f  time_noise: %.4f "
-                                 "time_min_ls: %.4f  time_max_ls: %.4f\n"
+                                 "time_min_ls: %.4f  time_max_ls: %.4f"
                                  % (mcmc_iter+1, self.mcmc_iters, np.exp(self.time_mean),
                                     np.sqrt(self.time_amp2), np.exp(self.time_noise),
                                     np.min(self.time_ls), np.max(self.time_ls)))
@@ -223,7 +223,7 @@ class GPEIperSecChooser:
                 b.append((0, 1))
 
             for i in xrange(0, cand2.shape[0]):
-                log("Optimizing candidate %d/%d\n" %
+                log("Optimizing candidate %d/%d" %
                                  (i+1, cand2.shape[0]))
                 ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
                                         cand2[i,:].flatten(),
@@ -246,7 +246,7 @@ class GPEIperSecChooser:
             self.optimize_hypers(comp, vals, durs)
 
             log("mean: %f  amp: %f  noise: %f "
-                             "min_ls: %f  max_ls: %f\n"
+                             "min_ls: %f  max_ls: %f"
                              % (self.mean, np.sqrt(self.amp2),
                                 self.noise, np.min(self.ls), np.max(self.ls)))
 
@@ -261,7 +261,7 @@ class GPEIperSecChooser:
                 b.append((0, 1))
 
             for i in xrange(0, cand2.shape[0]):
-                log("Optimizing candidate %d/%d\n" %
+                log("Optimizing candidate %d/%d" %
                                  (i+1, cand2.shape[0]))
                 ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei,
                                         cand2[i,:].flatten(),

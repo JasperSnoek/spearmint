@@ -1,57 +1,84 @@
 import os
 import sys
-sys.path.append(os.getcwd() + '/../lib')
-
 import json
-from ExperimentGrid import ExperimentGrid
+
 from flask import Flask, render_template, redirect, url_for
 
-class SpearmintWebApp(Flask):
-    def set_experiment_dir(self, expt_dir):
-        self.experiment_dir = expt_dir
+from spearmint.ExperimentGrid import ExperimentGrid
+from spearmint.helpers import load_experiment
+from spearmint.spearmint_pb2 import _LANGUAGE, _EXPERIMENT_PARAMETERSPEC_TYPE
 
-    def get_experiment_dir(self):
-        return self.experiment_dir
+
+class SpearmintWebApp(Flask):
+    def set_experiment_config(self, expt_config):
+        self.experiment_config = expt_config
+        self.experiment_dir = os.path.dirname(os.path.realpath(expt_config))
+
+    def experiment_grid(self):
+        return ExperimentGrid(self.experiment_dir)
+
+    def experiment(self):
+        return load_experiment(self.experiment_config)
+
+    def experiment_results(self, grid):
+        completed             = grid.get_complete()
+        grid_data, vals, durs = grid.get_grid()
+        worst_to_best         = sorted(completed, key=lambda i: vals[i], reverse=True)
+        return worst_to_best, [vals[i] for i in worst_to_best]
+
 
 app = SpearmintWebApp(__name__)
 
-def experiment_result_vals(grid):
-    completed             = grid.get_complete()
-    grid_data, vals, durs = grid.get_grid()
-    worst_to_best         = sorted(completed, key=lambda i: vals[i], reverse=True)
-    return worst_to_best, [vals[i] for i in worst_to_best]
-
+# Web App Routes
 
 @app.route("/status")
 def status():
+    grid = None
     try:
-        expt_dir = app.get_experiment_dir()
-        grid   = ExperimentGrid(expt_dir)
-        xs, ys = experiment_result_vals(grid)
-        xs = map(int, xs)
-        ys = map(float, ys)
-        stats  = {'completed':  grid.get_complete().size,
-                  'pending':    grid.get_pending().size,
-                  'candidates': grid.get_candidates().size,
-                  'broken':     grid.get_broken().size,
-                  'xs':         json.dumps(xs),
-                  'ys':         json.dumps(ys)
-                 }
-        return render_template('status.html', **stats)
+        grid = app.experiment_grid()
+        job_ids, scores = app.experiment_results(grid)
+        stats  = {
+            'candidates': grid.get_candidates().size,
+            'pending':    grid.get_pending().size,
+            'completed':  grid.get_complete().size,
+            'broken':     grid.get_broken().size,
+            'scores':     json.dumps(scores)
+        }
+        return render_template('status.html', stats=stats)
     finally:
         # Make sure we unlock the grid so as not to hold up the experiment
-        del grid
+        if grid:
+            del grid
 
 
 @app.route("/")
 def home():
-    expt = load_experiment
-    return render_template('home.html')
-    #return redirect(url_for('static', filename='index.html'))
+    exp = app.experiment()
+    params = []
+    for p in exp.variable:
+        param = {
+            'name': p.name,
+            'min': p.min,
+            'max': p.max,
+            'type': _EXPERIMENT_PARAMETERSPEC_TYPE.values_by_number[p.type].name,
+            'size': p.size
+        }
+        params.append(param)
+
+    ex = {
+        'name': exp.name,
+        'language': _LANGUAGE.values_by_number[exp.language].name,
+        'params': params
+    }
+    return render_template('home.html', experiment=ex)
 
 
 if __name__ == "__main__":
-    import os
-    app.set_experiment_dir(os.getcwd() + '/../examples/braninpy')
+    if len(sys.argv) < 2:
+        print "No experiment configuration file passed as argument to web app!"
+        print "Usage:\n\tpython spearmint/web/app.py path/to/config.pb\n"
+        sys.exit(0)
+
+    app.set_experiment_config(sys.argv[1])
     app.run(debug=True)
 

@@ -1,39 +1,45 @@
-<!doctype html>
-<head>
-    <script type="text/javascript" src="/static/js/jquery-1.8.3.min.js"></script>
-    <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+    <head>
+        <script type="text/javascript" src="/static/js/jquery-1.8.3.min.js"></script>
+        <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="/static/style.css" />
+        <title>Spearmint - Experiment Monitor</title>
+    </head>
+    <body>
+        <div id='container'>
+            <div id='header'>
+                <h2>Spearmint - Bayesian Optimizer</h2>
+            </div>
+            <div id='content'>
+                <div id='experiment'>
+                    <h3>{{experiment.name}} ({{experiment.language}})</h3>
+                </div>
+                <h4>Status:</h4>
+                <div id='status'></div>
+                <div id='result-chart'></div>
+                <form id="result-options">
+                    Max: <input id='max-score' name="max" type="number" value="100000000" />
+                </form>
 
-    <style type="text/css">
-        path {
-            stroke: steelblue;
-            stroke-width: 2;
-            fill: none;
-        }
+                <h4>Parameters:</h4>
+                <div id='parameters'>
+                    {% for param in experiment.params %}
+                    <table class='parameter'>
+                        <tr><td>Name: </td><td>{{ param.name }}</td></tr>
+                        <tr><td>Type: </td><td>{{ param.type }}</td></tr>
+                        <tr><td>Size: </td><td>{{ param.size }}</td></tr>
+                        <tr><td>Min:  </td><td>{{ param.min  }}</td></tr>
+                        <tr><td>Max:  </td><td>{{ param.max  }}</td></tr>
+                    </table>
+                    {% endfor %}
+                </div>
 
-        line {
-            stroke: black;
-        }
+                <div id='footer'></div>
+            </div>
+        </div>
+    </div>
 
-        text {
-            font-family: Arial;
-            font-size: 9pt;
-        }
-    </style>
-
-    <title>Spearmint - Experiment Monitor</title>
-</head>
-<body>
-<div id='container'>
-    <div id='header'>
-        <h2>Spearmint - Bayesian Optimizer</h2>
-    <div id='status'></div>
-    <div id='result-chart'></div>
-</div>
-<script>
-    var REFRESH_RATE = 5000;
-    function load_status() {
-        $('#status').load('/status');
-    }
-    var refresher = setInterval(load_status, REFRESH_RATE);
-</script>
+    <script type="text/javascript" src="/static/js/spearmint.js"></script>
 </body>
+</html>
