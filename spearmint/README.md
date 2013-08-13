@@ -200,7 +200,7 @@ A script, **cleanup.sh**, is provided to completely clean up all the intermediat
 files and results in an experimental directory and restart the
 experiment from scratch.
 
-Choser modules:
+Chooser modules:
 --------------- 
 
 The chooser modules implement functions that tell spearmint which next
