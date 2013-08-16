@@ -109,7 +109,7 @@ class GPEIperSecChooser:
         self.locker.lock_wait(self.state_pkl)
         sys.stderr.write("...acquired\n")
 
-        if os.path.exists(self.state_pkl):          
+        if os.path.exists(self.state_pkl):            
             fh    = open(self.state_pkl, 'r')
             state = cPickle.load(fh)
             fh.close()
@@ -123,7 +123,6 @@ class GPEIperSecChooser:
             self.time_amp2  = state['time_amp2']
             self.time_noise = state['time_noise']
             self.time_mean  = state['time_mean']
-            self.needs_burnin = False
         else:
 
             # Input dimensionality.
@@ -230,7 +229,6 @@ class GPEIperSecChooser:
             for i in xrange(0, cand2.shape[0]):
                 sys.stderr.write("Optimizing candidate %d/%d\n" %
                                  (i+1, cand2.shape[0]))
-                #self.check_grad_ei_per(cand2[i,:].flatten(), comp, vals, durs)
                 ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
                                         cand2[i,:].flatten(),
                                         args=(comp,vals,durs,True),
@@ -312,15 +310,15 @@ class GPEIperSecChooser:
         dx2 = dx1*0
         idx = np.zeros(cand.shape[0])
         for i in xrange(0, cand.shape[0]):
-            idx[i] = 1e-6*0.5
+            idx[i] = 1e-6
             (ei1,tmp) = self.grad_optimize_ei_over_hypers(cand + idx, comp, vals, durs)
             (ei2,tmp) = self.grad_optimize_ei_over_hypers(cand - idx, comp, vals, durs)
-            dx2[i] = (ei - ei2)/(1e-6)
+            dx2[i] = (ei - ei2)/(2*1e-6)
             idx[i] = 0
         print 'computed grads', dx1
         print 'finite diffs', dx2
         print (dx1/dx2)
-        print np.sqrt(np.sum((dx1 - dx2)**2))
+        print np.sum((dx1 - dx2)**2)
         time.sleep(2)
 
     # Adjust points by optimizing EI over a set of hyperparameter samples
@@ -434,9 +432,9 @@ class GPEIperSecChooser:
         grad_xp_v = np.dot(-2*spla.cho_solve((obsv_chol, True),
                                              cand_cross).transpose(),grad_cross)
         
-        grad_xp = self.amp2*(grad_xp_m*g_ei_m + grad_xp_v*g_ei_s2)
-        grad_time_xp_m = self.time_amp2*grad_time_xp_m*func_time_m
-        grad_xp = 0.5*(func_time_m*grad_xp - ei*grad_time_xp_m)/(func_time_m**2)
+        grad_xp = 0.5*self.amp2*(grad_xp_m*g_ei_m + grad_xp_v*g_ei_s2)
+        grad_time_xp_m = 0.5*self.time_amp2*grad_time_xp_m*func_time_m
+        grad_xp = (func_time_m*grad_xp - ei*grad_time_xp_m)/(func_time_m**2)
 
         return ei_per_s, grad_xp.flatten()
 
@@ -524,7 +522,7 @@ class GPEIperSecChooser:
             pend_chol = spla.cholesky(pend_K, lower=True)
 
             # Make predictions.
-            pend_fant = np.dot(pend_chol, npr.randn(pend.shape[0],self.pending_samples)) + self.mean
+            pend_fant = np.dot(pend_chol, npr.randn(pend.shape[0],self.pending_samples)) + pend_m
 
             # Include the fantasies.
             fant_vals = np.concatenate((np.tile(vals[:,np.newaxis], 
