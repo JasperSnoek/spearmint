@@ -307,7 +307,10 @@ class GridMap:
             elif variable['type'] == 'float':
                 param.type = 'float'
                 for dd in xrange(variable['size']):
-                    param.dbl_val.append(variable['min'] + u[index]*(variable['max']-variable['min']))
+                    val = variable['min'] + u[index]*(variable['max']-variable['min'])
+                    val = variable['min'] if val < variable['min'] else val
+                    val = variable['max'] if val > variable['max'] else val
+                    param.dbl_val.append(val)
                     index += 1
 
             elif variable['type'] == 'enum':
