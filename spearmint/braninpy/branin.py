@@ -17,7 +17,7 @@ def branin(x):
   y = np.square(x[1] - (5.1/(4*np.square(math.pi)))*np.square(x[0]) + (5/math.pi)*x[0] - 6) + 10*(1-(1./(8*math.pi)))*np.cos(x[0]) + 10;
 
   result = y
-  time.sleep(60)
+
   print result
   return result
 
