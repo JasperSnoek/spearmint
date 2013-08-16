@@ -240,7 +240,7 @@ class GPEIChooser:
 
             # Make predictions.
             pend_fant = (np.dot(pend_chol, npr.randn(pend.shape[0],self.pending_samples))
-                         + pend_m)
+                         + pend_m[:,None])
 
             # Include the fantasies.
             fant_vals = np.concatenate((np.tile(vals[:,np.newaxis], 
