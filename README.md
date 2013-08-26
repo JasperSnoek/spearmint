@@ -32,11 +32,11 @@ On Ubuntu linux you can install this package using the command:
 * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) (for the fully automated code).
 Note that you should be able to install protocol-buffers from source without requiring administrator privileges.  Otherwise, on Ubuntu linux you can install this package using the command:
      	  
-		apt-get install python-protobuf
-			
-			and on Mac with:
+	apt-get install python-protobuf
+						
+and on Mac with:
 
-			    pip install protobuf
+	pip install protobuf
 
 This package has been tested on Ubuntu linux (versions 11.0+) and
 Mac-OSX.
