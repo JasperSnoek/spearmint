@@ -22,17 +22,17 @@ This package requires:
 * [Numpy](http://www.numpy.org/) version 1.6.1+
 On Ubuntu linux you can install this package using the command:
      
-     apt-get install python-numpy
+	apt-get install python-numpy
 
 * [Scipy](http://www.scipy.org/) version 0.9.0+
 On Ubuntu linux you can install this package using the command:
 
-     apt-get install python-scipy
+        apt-get install python-scipy
 
 * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) (for the fully automated code).
 Note that you should be able to install protocol-buffers from source without requiring administrator privileges.  Otherwise, on Ubuntu linux you can install this package using the command:
 
-     apt-get install python-protobuf
+       apt-get install python-protobuf
 						
 and on Mac with:
 
