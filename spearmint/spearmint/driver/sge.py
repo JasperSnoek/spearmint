@@ -12,6 +12,7 @@ from helpers  import *
 # the matlab runner or a user script...
 
 # System dependent modules
+# Note these are specific to the Harvard configuration
 DEFAULT_MODULES = [ 'packages/epd/7.1-2',
                     'packages/matlab/r2011b',
                     'mpi/openmpi/1.2.8/intel',
@@ -23,7 +24,6 @@ DEFAULT_MODULES = [ 'packages/epd/7.1-2',
 # Load matlab modules
 #module load %s
 
-
 class SGEDriver(DispatchDriver):
 
     def submit_job(self, job):
@@ -31,20 +31,20 @@ class SGEDriver(DispatchDriver):
         job_file    = job_file_for(job)
         modules     = " ".join(DEFAULT_MODULES)
         mint_path   = sys.argv[0]
-        sge_script  = '%s --run-job "%s"' % (mint_path, job_file)
+        sge_script  = 'python %s --run-job "%s" .' % (mint_path, job_file)
 
         qsub_cmd    = ['qsub', '-S', '/bin/bash',
                        '-N', "%s-%d" % (job.name, job.id),
-                       '-j', 'yes',
                        '-e', output_file,
-                       '-o', output_file
+                       '-o', output_file,
+                       '-j', 'y',
                       ]
 
-        process = subprocess.Popen(qsub_cmd,
+        process = subprocess.Popen(" ".join(qsub_cmd),
                                    stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT,
-                                   shell=False)
+                                   shell=True)
         output = process.communicate(input=sge_script)[0]
         process.stdin.close()
 
