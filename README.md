@@ -21,22 +21,22 @@ This package requires:
 
 * [Numpy](http://www.numpy.org/) version 1.6.1+
 On Ubuntu linux you can install this package using the command:
-     
-	apt-get install python-numpy
+
+		apt-get install python-numpy
 
 * [Scipy](http://www.scipy.org/) version 0.9.0+
 On Ubuntu linux you can install this package using the command:
 
-        apt-get install python-scipy
+		apt-get install python-scipy
 
 * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) (for the fully automated code).
 Note that you should be able to install protocol-buffers from source without requiring administrator privileges.  Otherwise, on Ubuntu linux you can install this package using the command:
 
-       apt-get install python-protobuf
+		apt-get install python-protobuf
 						
-and on Mac with:
+	and on Mac with:
 
-	pip install protobuf
+		pip install protobuf
 
 This package has been tested on Ubuntu linux (versions 11.0+) and
 Mac-OSX.
@@ -102,17 +102,17 @@ function value (that is being optimized) at these inputs.
 
 To install spearmint, go into the spearmint subdirectory and type (most likely preceded with 'sudo'):
 
-   python setup.py install
+	python setup.py install
 
 You should add the spearmint subdirectory to your PYTHONPATH directory.  Note that you can often avoid the above step, but may have to add all the relevant modules to your PYTHONPATH and call spearmint directory from the directory using main.py.
 
 To run spearmint, go into the **/bin** subdirectory and type:
-   
-   ./spearmint ../examples/braninpy/config.pb --driver=local --method=GPEIOptChooser --method-args=noiseless=1
+
+	./spearmint ../examples/braninpy/config.pb --driver=local --method=GPEIOptChooser --method-args=noiseless=1
 
 or alternatively in the **/spearmint** subdirectory:
 
-   python main.py --driver=local --method=GPEIOptChooser --method-args=noiseless=1 ../examples/braninpy/config.pb
+	python main.py --driver=local --method=GPEIOptChooser --method-args=noiseless=1 ../examples/braninpy/config.pb
 
 This will run spearmint according to the GP-EI MCMC strategy.  The code will sequentially spawn
 processes that call the wrapper function and it will poll for results.
@@ -190,7 +190,7 @@ have a name, a type (float, int or enum), a 'min', a 'max' and a
 
 Go back to the top-level directory and run: 
 
-   python spearmint-lite.py braninpy
+	python spearmint-lite.py braninpy
 
 Spearmint-lite will run one iteration of Bayesian
 optimization and write out to a file named results.dat in the braninpy
