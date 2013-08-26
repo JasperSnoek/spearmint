@@ -21,22 +21,22 @@ This package requires:
 
 * [Numpy](http://www.numpy.org/) version 1.6.1+
 On Ubuntu linux you can install this package using the command:
-     
-	apt-get install python-numpy
+
+		apt-get install python-numpy
 
 * [Scipy](http://www.scipy.org/) version 0.9.0+
 On Ubuntu linux you can install this package using the command:
 
-   	  apt-get install python-scipy
+		apt-get install python-scipy
 
 * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) (for the fully automated code).
 Note that you should be able to install protocol-buffers from source without requiring administrator privileges.  Otherwise, on Ubuntu linux you can install this package using the command:
-     	  
-	apt-get install python-protobuf
-						
-and on Mac with:
 
-	pip install protobuf
+		apt-get install python-protobuf
+						
+	and on Mac with:
+
+		pip install protobuf
 
 This package has been tested on Ubuntu linux (versions 11.0+) and
 Mac-OSX.
@@ -102,17 +102,17 @@ function value (that is being optimized) at these inputs.
 
 To install spearmint, go into the spearmint subdirectory and type (most likely preceded with 'sudo'):
 
-   python setup.py install
+	python setup.py install
 
 You should add the spearmint subdirectory to your PYTHONPATH directory.  Note that you can often avoid the above step, but may have to add all the relevant modules to your PYTHONPATH and call spearmint directory from the directory using main.py.
 
 To run spearmint, go into the **/bin** subdirectory and type:
-   
-   ./spearmint ../examples/braninpy/config.pb --driver=local --method=GPEIOptChooser --method-args=noiseless=1
+
+	./spearmint ../examples/braninpy/config.pb --driver=local --method=GPEIOptChooser --method-args=noiseless=1
 
 or alternatively in the **/spearmint** subdirectory:
 
-   python main.py --driver=local --method=GPEIOptChooser --method-args=noiseless=1 ../examples/braninpy/config.pb
+	python main.py --driver=local --method=GPEIOptChooser --method-args=noiseless=1 ../examples/braninpy/config.pb
 
 This will run spearmint according to the GP-EI MCMC strategy.  The code will sequentially spawn
 processes that call the wrapper function and it will poll for results.
@@ -171,10 +171,10 @@ To run multiple jobs in parallel, pass to spearmint the argument:
 
 Spearmint is designed to be run in parallel either using multiple processors on a single machine or in a cluster environment.  These different environments, however, involve different queuing and fault-checking code and are thus coded as 'driver' modules.  Currently two drivers are available, but one can easily create a driver for a different environment by creating a new driver module (see the driver subdirectory for examples).
 
-Using the --driver=sge flag, Spearmint can run on a system with Sun Grid Engine and it uses SGE to distribute experiments on a multi-node cluster in parallel using a queueing system in a fault-tolerant way.  It is particularly
+Using the `--driver=sge` flag, Spearmint can run on a system with Sun Grid Engine and it uses SGE to distribute experiments on a multi-node cluster in parallel using a queueing system in a fault-tolerant way.  It is particularly
 well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/cluster/) will allow you to set up a large cluster and start distributing experiments within minutes.
 
-Using the --driver=local flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
+Using the `--driver=local` flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
 
 Running the basic code: Spearmint-lite 
 ---------------------------------------
@@ -190,7 +190,7 @@ have a name, a type (float, int or enum), a 'min', a 'max' and a
 
 Go back to the top-level directory and run: 
 
-   python spearmint-lite.py braninpy
+	python spearmint-lite.py braninpy
 
 Spearmint-lite will run one iteration of Bayesian
 optimization and write out to a file named results.dat in the braninpy
@@ -219,7 +219,7 @@ Bayesian optimization literature.  Spearmint takes as an argument
 `--method=ChooserModule` which allows one to easy swap out acquisition
 functions. Choosers may optionally include parameters that can be
 passed to spearmint using the argument
-`method-args=argument1,argument2,etc`.  These include, for example, the
+`--method-args=argument1,argument2,etc`.  These include, for example, the
 number of GP hyperparameter samples to use. See the comments in
 chooser files for chooser dependent arguments.  Below are described
 the choosers provided in this package:
