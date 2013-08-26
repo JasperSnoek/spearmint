@@ -219,7 +219,7 @@ Bayesian optimization literature.  Spearmint takes as an argument
 `--method=ChooserModule` which allows one to easy swap out acquisition
 functions. Choosers may optionally include parameters that can be
 passed to spearmint using the argument
-`method-args=argument1,argument2,etc`.  These include, for example, the
+`--method-args=argument1,argument2,etc`.  These include, for example, the
 number of GP hyperparameter samples to use. See the comments in
 chooser files for chooser dependent arguments.  Below are described
 the choosers provided in this package:
