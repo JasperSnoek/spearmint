@@ -1,4 +1,6 @@
 from cma import CMAEvolutionStrategy
+import util
+import Locker
 
 def init(expt_dir, arg_string):
     args = util.unpack_args(arg_string)
@@ -7,10 +9,12 @@ def init(expt_dir, arg_string):
 """
 Chooser module for the CMA-ES evolutionary optimizer.
 """
-class GPEIChooser:
+class CMAChooser:
 
     def __init__(self, expt_dir):
 
+        raise NotImplementedError('The CMA chooser is not yet implemented!')
+        
         self.state_pkl = os.path.join(expt_dir, self.__module__ + ".pkl")
 
         #TODO: params needs to be an array of starting values
@@ -19,6 +23,8 @@ class GPEIChooser:
         self.optimizer = CMAEvolutionStrategy(params)
 
     def _real_init(self, dims, values):
+
+        raise NotImplementedError('The CMA chooser is not yet implemented!')
         self.locker.lock_wait(self.state_pkl)
 
         if os.path.exists(self.state_pkl):
@@ -30,16 +36,18 @@ class GPEIChooser:
             #defaults
 
     def __del__(self):
+
+        raise NotImplementedError('The CMA chooser is not yet implemented!')
         self.locker.lock_wait(self.state_pkl)
 
         # Write the hyperparameters out to a Pickle.
         fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
 
         # do this to save the optimizer state
-    >>> pickle.dump(es, open('saved-cma-object.pkl', 'wb'))
+#    >>> pickle.dump(es, open('saved-cma-object.pkl', 'wb'))
 
         # and this to load it back...
-    >>> es = pickle.load(open('saved-cma-object.pkl', 'rb'))
+#    >>> es = pickle.load(open('saved-cma-object.pkl', 'rb'))
 
         cPickle.dump({ 'dims'   : self.D,
                        'ls'     : self.ls,
@@ -56,6 +64,9 @@ class GPEIChooser:
         self.locker.unlock(self.state_pkl)
 
     def next(self, grid, values, durations, candidates, pending, complete):
+
+        raise NotImplementedError('The CMA chooser is not yet implemented!')
+
         # Perform the real initialization.
         if self.D == -1:
             self._real_init(grid.shape[1], values[complete])
@@ -70,6 +81,6 @@ class GPEIChooser:
         # sample, or maybe generate a population of samples and iterate through
         # them?
 
-    ...         X = es.ask()    # get list of new solutions
-    ...         fit = [cma.fcts.rastrigin(x) for x in X]  # evaluate each solution
-    ...         es.tell(X, fit) # besides for termination only the ranking in fit is used
+#    ...         X = es.ask()    # get list of new solutions
+#    ...         fit = [cma.fcts.rastrigin(x) for x in X]  # evaluate each solution
+#    ...         es.tell(X, fit) # besides for termination only the ranking in fit is used
