@@ -2,11 +2,11 @@ Spearmint
 ---------
 
 Spearmint is a package to perform Bayesian optimization according to the
-algorithms outlined in the paper:  
+algorithms outlined in the paper:
 
-**Practical Bayesian Optimization of Machine Learning Algorithms**  
-Jasper Snoek, Hugo Larochelle and Ryan P. Adams  
-*Advances in Neural Information Processing Systems*, 2012  
+**Practical Bayesian Optimization of Machine Learning Algorithms**
+Jasper Snoek, Hugo Larochelle and Ryan P. Adams
+*Advances in Neural Information Processing Systems*, 2012
 
 This code is designed to automatically run experiments (thus the code
 name 'spearmint') in a manner that iteratively adjusts a number of
@@ -30,10 +30,17 @@ On Ubuntu linux you can install this package using the command:
 		apt-get install python-scipy
 
 * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) (for the fully automated code).
+<<<<<<< HEAD
 Note that you should be able to install protocol-buffers from source without requiring administrator privileges.  Otherwise, on Ubuntu linux you can install this package using the command:
 
 		apt-get install python-protobuf
 						
+=======
+On Ubuntu linux you can install this package using the command:
+
+		apt-get install python-protobuf
+
+>>>>>>> 6eab58cb958478c1dbf5318dcc574e467971ead6
 	and on Mac with:
 
 		pip install protobuf
@@ -48,7 +55,19 @@ expected improvement, UCB or random.  The drivers determine how
 experiments are distributed and run on the system.  As the code is
 designed to run experiments in parallel (spawning a new experiment as
 soon a result comes in), this requires some engineering.  The current
+<<<<<<< HEAD
 implementations of these are in the 'spearmint' and 'spearmint-lite' subdirectories:
+=======
+implementations of these are in 'spearmint.py', 'spearmint_sync.py'
+and 'spearmint-lite.py':
+
+**Spearmint.py** is designed to run on a system with Sun Grid Engine and
+uses SGE to distribute experiments on a multi-node cluster in parallel
+using a queueing system in a fault-tolerant way.  It is particularly
+well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/cluster/)
+will allow you to set up a large cluster and start distributing experiments
+within minutes.
+>>>>>>> 6eab58cb958478c1dbf5318dcc574e467971ead6
 
 **Spearmint** is designed to automatically manage the launching and associated bookkeeping 
 of experiments in either a single machine or cluster environment.  This requires that you provide
@@ -88,7 +107,7 @@ variables over which to optimize and SIZE is the number of variables
 of this type with these bounds.  Spearmint will call your wrapper
 function with a dictionary type (in python) containing each of your
 variables in a vector of size 'size', which you can access using the
-name specified.  
+name specified.
 
 Now take a look at branin.py (the wrapper which was
 specified in the 'name' variable at the top of config.pb).  You will
@@ -142,13 +161,13 @@ completed thus far.  The output directory contains a text file for
 each job-id, containing the output of that job.  So if you want to
 see, e.g. what the output (i.e. standard out and standard error) was
 for the best job (as obtained from trace.csv) you can look up
-job-id.txt in the output directory. 
+job-id.txt in the output directory.
 
  If you are debugging your code,
 or the code is crashing for some reason, it's a good idea to look at
 these files. Finally for ease of use, spearmint also prints out at
 each iteration a file called 'best_job_and_result.txt' that contains the
-best result observed so far, the job-id it came from and a dump of 
+best result observed so far, the job-id it came from and a dump of
 the names and values of all of the parameters corresponding to that result.
 
 A script, bin/cleanup, is provided to completely restart an experiment
@@ -169,6 +188,7 @@ above.
 To run multiple jobs in parallel, pass to spearmint the argument:
 `--max-concurrent=<#jobs>`
 
+<<<<<<< HEAD
 Spearmint is designed to be run in parallel either using multiple processors on a single machine or in a cluster environment.  These different environments, however, involve different queuing and fault-checking code and are thus coded as 'driver' modules.  Currently two drivers are available, but one can easily create a driver for a different environment by creating a new driver module (see the driver subdirectory for examples).
 
 Using the `--driver=sge` flag, Spearmint can run on a system with Sun Grid Engine and it uses SGE to distribute experiments on a multi-node cluster in parallel using a queueing system in a fault-tolerant way.  It is particularly
@@ -177,6 +197,9 @@ well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/c
 Using the `--driver=local` flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
 
 Running the basic code: Spearmint-lite 
+=======
+Running the basic code: Spearmint-lite
+>>>>>>> 6eab58cb958478c1dbf5318dcc574e467971ead6
 ---------------------------------------
 
 Spearmint-lite is designed to be simple.  To run an experiment in
@@ -186,32 +209,37 @@ experiment specification, which must be provided in config.json, is in
 JSON format.  You must specify your problem as a sequence of JSON
 objects.  As in the protocol buffer format above, each object must
 have a name, a type (float, int or enum), a 'min', a 'max' and a
-'size'. Nothing else needs to be specified.  
+'size'. Nothing else needs to be specified.
 
-Go back to the top-level directory and run: 
+Go back to the top-level directory and run:
 
 	python spearmint-lite.py braninpy
 
 Spearmint-lite will run one iteration of Bayesian
 optimization and write out to a file named results.dat in the braninpy
 subdirectory.  results.dat will contain a white-space delimited line
-for each experiment, of the format: 
+for each experiment, of the format:
 `<result> <time-taken> <list of parameters in the same order as config.json>`
 
-Spearmint will propose new experiments and append them to results.dat each 
-time it is run. Each proposed experiment will have a 'pending' result and 
-time-taken, indicated by the letter P. The user must then run the experiment 
+Spearmint will propose new experiments and append them to results.dat each
+time it is run. Each proposed experiment will have a 'pending' result and
+time-taken, indicated by the letter P. The user must then run the experiment
 and fill in these values. Note that the time can safely be set to an arbitrary
-value if the chooser module does not use it (only GPEIperSecChooser currently 
-does). Spearmint will condition on the pending experiments when proposing new 
+value if the chooser module does not use it (only GPEIperSecChooser currently
+does). Spearmint will condition on the pending experiments when proposing new
 ones, so any number of experiments can be conducted in parallel.
 
 A script, **cleanup.sh**, is provided to completely clean up all the intermediate
 files and results in an experimental directory and restart the
 experiment from scratch.
 
+<<<<<<< HEAD
 Chooser modules:
 --------------- 
+=======
+Choser modules:
+---------------
+>>>>>>> 6eab58cb958478c1dbf5318dcc574e467971ead6
 
 The chooser modules implement functions that tell spearmint which next
 job to run.  Some correspond to 'acquisition functions' in the
@@ -230,7 +258,7 @@ coarse-to-fine grid.
 
 * **RandomChooser**: Experiments are sampled randomly from the unit hypercube.
 
-* **GPEIOptChooser:** The GP EI MCMC algorithm from the paper. Jobs 
+* **GPEIOptChooser:** The GP EI MCMC algorithm from the paper. Jobs
 are first sampled densely from a dense grid on the unit hypercube
 and then the best candidates are optimized 'fine-tuned' according
 to EI.

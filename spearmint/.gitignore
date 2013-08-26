@@ -1,0 +1,7 @@
+*.pyc
+*.sw[op]
+*.pkl
+**/jobs
+**/output
+**/best_job_and_result.txt
+**/trace.csv

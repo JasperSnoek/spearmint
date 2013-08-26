@@ -1,0 +1,16 @@
+#! /bin/bash
+
+# This is a simple script to cleanup the intermediate files in
+# spearmint experiment directories
+
+GARBAGE="trace.csv output/* jobs/* expt-grid.pkl expt-grid.pkl.lock \
+  *.pyc  *GP*Chooser*.pkl *Chooser*hyperparameters.txt best_job_and_result.txt"
+
+[[ -n "$1" ]] || { echo "Usage: cleanup.sh <experiment_dir>"; exit 0 ; }
+if [ -d $1 ]
+then
+    cd $1
+    rm -f $GARBAGE
+else
+    echo "$1 is not a valid directory"
+fi

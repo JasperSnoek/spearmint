@@ -1,0 +1,22 @@
+<div id='job-status'>
+    <div>Candidates: {{ stats.candidates }}</div>
+    <div>Pending:    {{ stats.pending    }}</div>
+    <div>Completed:  {{ stats.completed  }}</div>
+    <div>Broken:     {{ stats.broken     }}</div>
+</div>
+
+<script>
+    var y_data = {{ stats.scores }};
+    console.log(y_data);
+    var max_y = d3.min([max_score, d3.max(y_data)]);
+    max_score = max_y;
+    $('#max-score').val(max_y);
+
+    var trimmed = y_data.filter(function(v, idx, arr) {
+        return (v <= max_score);
+    });
+
+    if (trimmed.length > 1) {
+        line_chart(height, width, margin, trimmed);
+    }
+</script>

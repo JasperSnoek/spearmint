@@ -1,7 +1,7 @@
 ##
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-# 
-# This code is written for research and educational purposes only to 
+#
+# This code is written for research and educational purposes only to
 # supplement the paper entitled
 # "Practical Bayesian Optimization of Machine Learning Algorithms"
 # by Snoek, Larochelle and Adams
@@ -11,12 +11,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
@@ -31,7 +31,9 @@ import scipy.stats    as sps
 import scipy.optimize as spo
 import cPickle
 
-from Locker import *
+from Locker  import *
+from helpers import *
+
 
 def init(expt_dir, arg_string):
     args = util.unpack_args(arg_string)
@@ -45,7 +47,7 @@ is used to sample Gaussian process hyperparameters for the GP.
 """
 class GPEIChooser:
 
-    def __init__(self, expt_dir, covar="Matern52", mcmc_iters=10, 
+    def __init__(self, expt_dir, covar="Matern52", mcmc_iters=10,
                  pending_samples=100, noiseless=False):
         self.cov_func        = getattr(gp, covar)
         self.locker          = Locker()
@@ -62,9 +64,7 @@ class GPEIChooser:
         self.max_ls      = 2    # top-hat prior on length scales
 
     def __del__(self):
-        sys.stderr.write("Waiting to lock hyperparameter pickle...")
         self.locker.lock_wait(self.state_pkl)
-        sys.stderr.write("...acquired\n")
 
         # Write the hyperparameters out to a Pickle.
         fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
@@ -83,12 +83,9 @@ class GPEIChooser:
         self.locker.unlock(self.state_pkl)
 
     def _real_init(self, dims, values):
-        
-        sys.stderr.write("Waiting to lock hyperparameter pickle...")
         self.locker.lock_wait(self.state_pkl)
-        sys.stderr.write("...acquired\n")
 
-        if os.path.exists(self.state_pkl):            
+        if os.path.exists(self.state_pkl):
             fh    = open(self.state_pkl, 'r')
             state = cPickle.load(fh)
             fh.close()
@@ -119,13 +116,12 @@ class GPEIChooser:
 
     def cov(self, x1, x2=None):
         if x2 is None:
-            return self.amp2 * (self.cov_func(self.ls, x1, None) 
+            return self.amp2 * (self.cov_func(self.ls, x1, None)
                                + 1e-6*np.eye(x1.shape[0]))
         else:
             return self.amp2 * self.cov_func(self.ls, x1, x2)
 
-    def next(self, grid, values, durations,
-             candidates, pending, complete):
+    def next(self, grid, values, durations, candidates, pending, complete):
 
         # Don't bother using fancy GP stuff at first.
         if complete.shape[0] < 2:
@@ -149,7 +145,7 @@ class GPEIChooser:
             for mcmc_iter in xrange(self.mcmc_iters):
 
                 self.sample_hypers(comp, vals)
-                sys.stderr.write("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f\n"
+                log("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f"
                                  % (self.mean, np.sqrt(self.amp2), self.noise, np.min(self.ls), np.max(self.ls)))
 
                 overall_ei[:,mcmc_iter] = self.compute_ei(comp, pend, cand, vals)
@@ -169,7 +165,7 @@ class GPEIChooser:
                 self.amp2 = np.std(vals)
                 # Initial observation noise.
                 self.noise = 1e-3
-            sys.stderr.write("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f\n"
+            log("mean: %f  amp: %f  noise: %f  min_ls: %f  max_ls: %f"
                              % (self.mean, np.sqrt(self.amp2), self.noise, np.min(self.ls),
                                 np.max(self.ls)))
 
@@ -187,7 +183,7 @@ class GPEIChooser:
             best = np.min(vals)
 
             # The primary covariances for prediction.
-            comp_cov   = self.cov(comp)      
+            comp_cov   = self.cov(comp)
             cand_cross = self.cov(comp, cand)
 
             # Compute the required Cholesky.
@@ -212,7 +208,7 @@ class GPEIChooser:
             return ei
         else:
             # If there are pending experiments, fantasize their outcomes.
-            
+
             # Create a composite vector of complete and pending.
             comp_pend = np.concatenate((comp, pend))
 
@@ -243,7 +239,7 @@ class GPEIChooser:
                          + pend_m[:,None])
 
             # Include the fantasies.
-            fant_vals = np.concatenate((np.tile(vals[:,np.newaxis], 
+            fant_vals = np.concatenate((np.tile(vals[:,np.newaxis],
                                                 (1,self.pending_samples)), pend_fant))
 
             # Compute bests over the fantasies.
@@ -281,7 +277,7 @@ class GPEIChooser:
         def logprob(ls):
             if np.any(ls < 0) or np.any(ls > self.max_ls):
                 return -np.inf
-            
+
             cov   = self.amp2 * (self.cov_func(ls, comp, None) + 1e-6*np.eye(comp.shape[0])) + self.noise*np.eye(comp.shape[0])
             chol  = spla.cholesky(cov, lower=True)
             solve = spla.cho_solve((chol, True), vals - self.mean)
@@ -302,7 +298,7 @@ class GPEIChooser:
 
             if amp2 < 0 or noise < 0:
                 return -np.inf
-            
+
             cov   = amp2 * (self.cov_func(self.ls, comp, None) +
                             1e-6*np.eye(comp.shape[0])) + noise*np.eye(comp.shape[0])
             chol  = spla.cholesky(cov, lower=True)
@@ -331,7 +327,7 @@ class GPEIChooser:
 
             if amp2 < 0:
                 return -np.inf
-            
+
             cov   = amp2 * (self.cov_func(self.ls, comp, None) +
                             1e-6*np.eye(comp.shape[0])) + noise*np.eye(comp.shape[0])
             chol  = spla.cholesky(cov, lower=True)
@@ -357,10 +353,10 @@ class GPEIChooser:
         self.ls = mygp.ls
         self.amp2 = mygp.amp2
         self.noise = mygp.noise
-        
+
         # Save hyperparameter samples
         #self.hyper_samples.append((self.mean, self.noise, self.amp2, self.ls))
         #self.dump_hypers()
-        
+
         return
 

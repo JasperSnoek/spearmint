@@ -1,0 +1,67 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: helvetica, arial, sans-serif;
+    background-color: rgb(50, 205, 50);
+}
+
+body, html{
+    height:100%;
+}
+
+#container {
+    height: 100%;
+    min-height: 100%;
+    border: 1px solid rgb(80, 80, 80);
+    width: 900px;
+    margin: 0;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: white;
+}
+
+#header {
+    padding: 5px;
+    padding-left: 20px;
+    margin-bottom: 10px;
+    background-color: rgb(80, 80, 80);
+    color: rgb(50, 205, 50);
+}
+
+#content {
+    padding: 8px;
+}
+
+#footer {
+    clear: both;
+}
+
+.parameter {
+    float: left;
+    padding: 5px;
+    margin: 5px;
+    border: 1px solid grey;
+}
+
+#status {
+    clear: both;
+}
+
+
+/* SVG styling for the charts */
+
+path {
+    stroke: steelblue;
+    stroke-width: 2;
+    fill: none;
+}
+
+line {
+    stroke: black;
+}
+
+text {
+    font-family: Arial;
+    font-size: 9pt;
+}
+

@@ -1,7 +1,7 @@
 ##
 # Copyright (C) 2012 Jasper Snoek, Hugo Larochelle and Ryan P. Adams
-# 
-# This code is written for research and educational purposes only to 
+#
+# This code is written for research and educational purposes only to
 # supplement the paper entitled
 # "Practical Bayesian Optimization of Machine Learning Algorithms"
 # by Snoek, Larochelle and Adams
@@ -11,12 +11,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
@@ -30,12 +30,15 @@ import numpy.random as npr
 from spearmint_pb2 import *
 from Locker        import *
 from sobol_lib     import *
+from helpers       import *
 
 CANDIDATE_STATE = 0
 SUBMITTED_STATE = 1
 RUNNING_STATE   = 2
 COMPLETE_STATE  = 3
 BROKEN_STATE    = -1
+
+EXPERIMENT_GRID_FILE = 'expt-grid.pkl'
 
 class ExperimentGrid:
 
@@ -46,8 +49,10 @@ class ExperimentGrid:
 
     @staticmethod
     def job_complete(expt_dir, id, value, duration):
+        log("setting job %d complete" % id)
         expt_grid = ExperimentGrid(expt_dir)
         expt_grid.set_complete(id, value, duration)
+        log("set...")
 
     @staticmethod
     def job_broken(expt_dir, id):
@@ -56,37 +61,32 @@ class ExperimentGrid:
 
     def __init__(self, expt_dir, variables=None, grid_size=None, grid_seed=1):
         self.expt_dir = expt_dir
-        self.jobs_pkl = os.path.join(expt_dir, 'expt-grid.pkl')
+        self.jobs_pkl = os.path.join(expt_dir, EXPERIMENT_GRID_FILE)
         self.locker   = Locker()
 
-        # Only one process at a time is allowed to have access to this.
-        sys.stderr.write("Waiting to lock grid...")
+        # Only one process at a time is allowed to have access to the grid.
         self.locker.lock_wait(self.jobs_pkl)
-        sys.stderr.write("...acquired\n")
 
-        # Does this exist already?
+        # Set up the grid for the first time if it doesn't exist.
         if variables is not None and not os.path.exists(self.jobs_pkl):
-
-            # Set up the grid for the first time.
-            self.seed = grid_seed
-            self.vmap   = GridMap(variables, grid_size)
-            self.grid   = self._hypercube_grid(self.vmap.card(), grid_size)
-            self.status = np.zeros(grid_size, dtype=int) + CANDIDATE_STATE
-            self.values = np.zeros(grid_size) + np.nan
-            self.durs   = np.zeros(grid_size) + np.nan
-            self.sgeids = np.zeros(grid_size, dtype=int)
-
-            # Save this out.
+            self.seed     = grid_seed
+            self.vmap     = GridMap(variables, grid_size)
+            self.grid     = self._hypercube_grid(self.vmap.card(), grid_size)
+            self.status   = np.zeros(grid_size, dtype=int) + CANDIDATE_STATE
+            self.values   = np.zeros(grid_size) + np.nan
+            self.durs     = np.zeros(grid_size) + np.nan
+            self.proc_ids = np.zeros(grid_size, dtype=int)
             self._save_jobs()
-        else:
 
-            # Load in from the pickle.
+        # Or load in the grid from the pickled file.
+        else:
             self._load_jobs()
+
 
     def __del__(self):
         self._save_jobs()
         if self.locker.unlock(self.jobs_pkl):
-            sys.stderr.write("Released lock on job grid.\n")
+            pass
         else:
             raise Exception("Could not release lock on job grid.\n")
 
@@ -117,18 +117,18 @@ class ExperimentGrid:
         else:
             return np.nan, -1
 
-    def get_sgeid(self, id):
-        return self.sgeids[id]
+    def get_proc_id(self, id):
+        return self.proc_ids[id]
 
     def add_to_grid(self, candidate):
         # Set up the grid
         self.grid   = np.vstack((self.grid, candidate))
-        self.status = np.append(self.status, np.zeros(1, dtype=int) + 
+        self.status = np.append(self.status, np.zeros(1, dtype=int) +
                                 int(CANDIDATE_STATE))
-        
+
         self.values = np.append(self.values, np.zeros(1)+np.nan)
         self.durs   = np.append(self.durs, np.zeros(1)+np.nan)
-        self.sgeids = np.append(self.sgeids, np.zeros(1,dtype=int))
+        self.proc_ids = np.append(self.proc_ids, np.zeros(1,dtype=int))
 
         # Save this out.
         self._save_jobs()
@@ -138,9 +138,9 @@ class ExperimentGrid:
         self.status[id] = CANDIDATE_STATE
         self._save_jobs()
 
-    def set_submitted(self, id, sgeid):
+    def set_submitted(self, id, proc_id):
         self.status[id] = SUBMITTED_STATE
-        self.sgeids[id] = sgeid
+        self.proc_ids[id] = proc_id
         self._save_jobs()
 
     def set_running(self, id):
@@ -167,7 +167,7 @@ class ExperimentGrid:
         self.status = jobs['status']
         self.values = jobs['values']
         self.durs   = jobs['durs']
-        self.sgeids = jobs['sgeids']
+        self.proc_ids = jobs['proc_ids']
 
     def _save_jobs(self):
 
@@ -178,7 +178,7 @@ class ExperimentGrid:
                        'status' : self.status,
                        'values' : self.values,
                        'durs'   : self.durs,
-                       'sgeids' : self.sgeids }, fh)
+                       'proc_ids' : self.proc_ids }, fh)
         fh.close()
 
         # Use an atomic move for better NFS happiness.
@@ -188,11 +188,11 @@ class ExperimentGrid:
     def _hypercube_grid(self, dims, size):
         # Generate from a sobol sequence
         sobol_grid = np.transpose(i4_sobol_generate(dims,size,self.seed))
-                
+
         return sobol_grid
 
 class GridMap:
-    
+
     def __init__(self, variables, grid_size):
         self.variables   = []
         self.cardinality = 0
@@ -222,8 +222,8 @@ class GridMap:
                                         'options' : list(variable.options)})
             else:
                 raise Exception("Unknown parameter type.")
-        sys.stderr.write("Optimizing over %d dimensions\n" % (self.cardinality))
-    
+        log("Optimizing over %d dimensions\n" % (self.cardinality))
+
     def get_params(self, u):
         if u.shape[0] != self.cardinality:
             raise Exception("Hypercube dimensionality is incorrect.")
@@ -232,7 +232,7 @@ class GridMap:
         index  = 0
         for variable in self.variables:
             param = Parameter()
-            
+
             param.name = variable['name']
 
             if variable['type'] == 'int':
@@ -253,11 +253,11 @@ class GridMap:
 
             else:
                 raise Exception("Unknown parameter type.")
-            
+
             params.append(param)
 
         return params
-            
+
     def card(self):
         return self.cardinality
 
