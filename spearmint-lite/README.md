@@ -22,21 +22,21 @@ This package requires:
 * [Numpy](http://www.numpy.org/) version 1.6.1+
 On Ubuntu linux you can install this package using the command:
      
-		apt-get install python-numpy
+	apt-get install python-numpy
 
 * [Scipy](http://www.scipy.org/) version 0.9.0+
 On Ubuntu linux you can install this package using the command:
 
-		apt-get install python-scipy
+   	  apt-get install python-scipy
 
 * [Google Protocol Buffers](https://developers.google.com/protocol-buffers/) (for the fully automated code).
-On Ubuntu linux you can install this package using the command:
-		
+Note that you should be able to install protocol-buffers from source without requiring administrator privileges.  Otherwise, on Ubuntu linux you can install this package using the command:
+     	  
 		apt-get install python-protobuf
-		
-	and on Mac with:
+			
+			and on Mac with:
 
-		pip install protobuf
+			    pip install protobuf
 
 This package has been tested on Ubuntu linux (versions 11.0+) and
 Mac-OSX.
@@ -48,21 +48,15 @@ expected improvement, UCB or random.  The drivers determine how
 experiments are distributed and run on the system.  As the code is
 designed to run experiments in parallel (spawning a new experiment as
 soon a result comes in), this requires some engineering.  The current
-implementations of these are in 'spearmint.py', 'spearmint_sync.py'
-and 'spearmint-lite.py':
+implementations of these are in the 'spearmint' and 'spearmint-lite' subdirectories:
 
-**Spearmint.py** is designed to run on a system with Sun Grid Engine and
-uses SGE to distribute experiments on a multi-node cluster in parallel
-using a queueing system in a fault-tolerant way.  It is particularly
-well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/cluster/) will allow you to set up a large
-cluster and start distributing experiments within minutes.
+**Spearmint** is designed to automatically manage the launching and associated bookkeeping 
+of experiments in either a single machine or cluster environment.  This requires that you provide
+a 'wrapper' in a supported language (currently Python or Matlab) and a configuration file detailing parameters
+to be tuned and their respective bounds. The wrapper must accept parameter values and then return simply a value which you wish to minimize with respect to the parameters. Spearmint will then iteratively call the wrapper with different 
+parameter settings in an order that seeks to find the minimum value in as few evaluations (or cost) as possible.
 
-**Spearmint_sync.py** is designed to run on a single machine with
-potentially many cores.  This driver simply spawns a new process on
-the current machine to run a new experiment.  This does not allow you
-to distribute across multiple machines, however.
-
-**Spearmint-lite.py** is the 'bare-bones' stripped version of the code.
+**Spearmint-lite** is the 'bare-bones' stripped version of the code.
 This version is simply driven by a flat-file and does not
 automatically run experiments.  Instead, it proposes new experiments
 (potentially multiple at a time) and requires that the user fill in
@@ -72,24 +66,23 @@ involve code at all) or if the user desires full control of the
 process.  Also, the dependency on Google protocol buffers is replaced
 with JSON.
 
-Running the automated code: Spearmint and Spearmint_sync
+Running the automated code: Spearmint
 --------------------------------------------------------
 
 The simplest way to get to know the code is probably to look at an
-example.  In order to start a new experiment, you must create a new
-subdirectory in the spearmint directory and include a wrapper script.
+example.  In order to start a new experiment, you must create a directory 
+that includes a wrapper script and config file.
 We have created one simple example for you that optimizes the
-'Braninhoo' benchmark in the subdirectory **braninpy**.  Take a look at
+'Braninhoo' benchmark in the subdirectory **examples/braninpy**.  Take a look at
 **config.pb**.  It contains the specifications of the algorithm in
 protocol buffer format.  In order to specify your optimization, you
 have to fill in the variables 'language' (e.g. PYTHON or MATLAB) and
 'name' (the name of the wrapper function you want to optimize).
 
-
 Followed by these is a list of 'variables', which specifies the name,
 type and size of the variables you wish to optimize over.  Each
 variable must be either a FLOAT, INT or ENUM type, corresponding to
-continous real valued parameters, integer sequences and categorical
+continuous real valued parameters, integer sequences and categorical
 variables respectively.  MAX and MIN specify the bounds of the
 variables over which to optimize and SIZE is the number of variables
 of this type with these bounds.  Spearmint will call your wrapper
@@ -107,9 +100,19 @@ wants to run.  The main function should take as input these parameters
 and return a single real valued number representing the observed
 function value (that is being optimized) at these inputs.
 
-To run spearmint, go back into the top-level directory and type:
+To install spearmint, go into the spearmint subdirectory and type (most likely preceded with 'sudo'):
 
-	python spearmint_sync.py --method=GPEIOptChooser --method-args=noiseless=1 braninpy
+   python setup.py install
+
+You should add the spearmint subdirectory to your PYTHONPATH directory.  Note that you can often avoid the above step, but may have to add all the relevant modules to your PYTHONPATH and call spearmint directory from the directory using main.py.
+
+To run spearmint, go into the **/bin** subdirectory and type:
+   
+   ./spearmint ../examples/braninpy/config.pb --driver=local --method=GPEIOptChooser --method-args=noiseless=1
+
+or alternatively in the **/spearmint** subdirectory:
+
+   python main.py --driver=local --method=GPEIOptChooser --method-args=noiseless=1 ../examples/braninpy/config.pb
 
 This will run spearmint according to the GP-EI MCMC strategy.  The code will sequentially spawn
 processes that call the wrapper function and it will poll for results.
@@ -119,7 +122,7 @@ hyperparameter samples and candidates it is optimizing over.  The
 'method' argument specifies the chooser module (acquisition function)
 to use and 'method-args' specifies chooser specific arguments.  In
 this case, as braninhoo is an analytic function we tell the GP
-hyperparameter sampling routine to not try to estimate noise.
+hyperparameter sampling routine to not try to estimate noise.  This parameter is very important to specify correctly for the optimization to proceed properly.  If your algorithm is entirely deterministic (e.g. analytic) then specifying that it is noiseless will speed up the optimization considerably.  If your algorithm is not deterministic, as we expect for most machine learning algorithms and indeed most expensive experiments, then you should leave this out or set noiseless=0.
 
 If you let it run for a while you will see that the current-best
 decreases, eventually reaching the minimum at ~0.39. You can kill the
@@ -148,9 +151,9 @@ each iteration a file called 'best_job_and_result.txt' that contains the
 best result observed so far, the job-id it came from and a dump of 
 the names and values of all of the parameters corresponding to that result.
 
-A script, cleanup.sh, is provided to completely restart an experiment
+A script, bin/cleanup, is provided to completely restart an experiment
 and delete all the results and intermediate files.  Simply run
-`cleanup.sh <experiment_dir>`
+`bin/cleanup <experiment_dir>`
 
 Matlab code can also be optimized using this package. To do so, you
 must specify in config.pb "type: Matlab" and use a matlab wrapper with
@@ -166,6 +169,13 @@ above.
 To run multiple jobs in parallel, pass to spearmint the argument:
 `--max-concurrent=<#jobs>`
 
+Spearmint is designed to be run in parallel either using multiple processors on a single machine or in a cluster environment.  These different environments, however, involve different queuing and fault-checking code and are thus coded as 'driver' modules.  Currently two drivers are available, but one can easily create a driver for a different environment by creating a new driver module (see the driver subdirectory for examples).
+
+Using the --driver=sge flag, Spearmint can run on a system with Sun Grid Engine and it uses SGE to distribute experiments on a multi-node cluster in parallel using a queueing system in a fault-tolerant way.  It is particularly
+well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/cluster/) will allow you to set up a large cluster and start distributing experiments within minutes.
+
+Using the --driver=local flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
+
 Running the basic code: Spearmint-lite 
 ---------------------------------------
 
@@ -180,7 +190,7 @@ have a name, a type (float, int or enum), a 'min', a 'max' and a
 
 Go back to the top-level directory and run: 
 
-	python spearmint-lite.py braninpy
+   python spearmint-lite.py braninpy
 
 Spearmint-lite will run one iteration of Bayesian
 optimization and write out to a file named results.dat in the braninpy
