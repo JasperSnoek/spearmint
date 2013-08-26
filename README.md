@@ -171,10 +171,10 @@ To run multiple jobs in parallel, pass to spearmint the argument:
 
 Spearmint is designed to be run in parallel either using multiple processors on a single machine or in a cluster environment.  These different environments, however, involve different queuing and fault-checking code and are thus coded as 'driver' modules.  Currently two drivers are available, but one can easily create a driver for a different environment by creating a new driver module (see the driver subdirectory for examples).
 
-Using the --driver=sge flag, Spearmint can run on a system with Sun Grid Engine and it uses SGE to distribute experiments on a multi-node cluster in parallel using a queueing system in a fault-tolerant way.  It is particularly
+Using the `--driver=sge` flag, Spearmint can run on a system with Sun Grid Engine and it uses SGE to distribute experiments on a multi-node cluster in parallel using a queueing system in a fault-tolerant way.  It is particularly
 well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/cluster/) will allow you to set up a large cluster and start distributing experiments within minutes.
 
-Using the --driver=local flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
+Using the `--driver=local` flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
 
 Running the basic code: Spearmint-lite 
 ---------------------------------------
