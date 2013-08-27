@@ -193,7 +193,7 @@ def main_controller(options, args):
         if isinstance(job_id, tuple):
             (job_id, candidate) = job_id
         else:
-            candidate = candidates[job_id,:]
+            candidate = grid[job_id,:]
 
         sys.stderr.write("Selected job %d from the grid.\n" % (job_id))
         if pending.shape[0] > 0:
