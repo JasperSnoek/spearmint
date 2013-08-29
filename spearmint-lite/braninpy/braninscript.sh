@@ -7,7 +7,7 @@
 for i in {1..50}
 do
     cd ..
-    for i in {1..3}
+    for i in {1..2}
     do
 	python spearmint-lite.py --method=GPEIOptChooser --grid-size=20000 --method-args=mcmc_iters=10,noiseless=1 braninpy
     done

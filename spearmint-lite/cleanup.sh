@@ -11,6 +11,7 @@ then
     rm expt-grid.pkl
     rm expt-grid.pkl.lock
     rm GP*Chooser*.pkl
+    rm chooser.*.pkl
     rm GPEIOptChooser*hyperparameters.txt
     rm best_job_and_result.txt
     rm results.dat

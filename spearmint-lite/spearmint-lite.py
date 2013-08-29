@@ -28,6 +28,7 @@ import imp
 import os
 import re
 import collections
+import importlib
 
 from ExperimentGrid  import *
 try: import simplejson as json
@@ -95,7 +96,7 @@ def main_controller(options, args):
         sys.exit(-1)
 
     # Load up the chooser module.
-    module  = __import__(options.chooser_module)
+    module  = importlib.import_module('chooser.' + options.chooser_module, package='spearmint')
     chooser = module.init(expt_dir, options.chooser_args)
 
     # Create the experimental grid
