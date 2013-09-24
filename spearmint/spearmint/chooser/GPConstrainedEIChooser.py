@@ -158,7 +158,7 @@ class GPConstrainedEIChooser:
             self.constraint_amp2  = state['constraint_amp2']
             self.constraint_noise = state['constraint_noise']
             self.constraint_mean  = state['constraint_mean']
-            self.constraint_gain  = state['constraint_mean']
+            self.constraint_gain  = state['constraint_gain']
             self.needs_burnin     = False
         else:
 
