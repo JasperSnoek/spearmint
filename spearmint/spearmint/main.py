@@ -124,7 +124,8 @@ def start_web_view(options, experiment_config, chooser):
     app.set_experiment_config(experiment_config)
     app.set_chooser(chooser)
     debug = (options.verbose == True)
-    start_web_app = lambda: app.run(debug=debug, port=port)
+    debug = False
+    start_web_app = lambda: app.run(debug=debug, host='0.0.0.0', port=port)
     proc = multiprocessing.Process(target=start_web_app)
     proc.start()
 
@@ -278,7 +279,7 @@ def write_trace(expt_dir, best_val, best_job,
                 n_candidates, n_pending, n_complete):
     '''Append current experiment state to trace file.'''
     trace_fh = open(os.path.join(expt_dir, 'trace.csv'), 'a')
-    trace_fh.write("%d,%f,%d,%d,%d,%d"
+    trace_fh.write("%d,%f,%d,%d,%d,%d\n"
                    % (time.time(), best_val, best_job,
                       n_candidates, n_pending, n_complete))
     trace_fh.close()
