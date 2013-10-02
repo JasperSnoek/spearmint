@@ -124,8 +124,7 @@ def start_web_view(options, experiment_config, chooser):
     app.set_experiment_config(experiment_config)
     app.set_chooser(chooser)
     debug = (options.verbose == True)
-    debug = False
-    start_web_app = lambda: app.run(debug=debug, host='0.0.0.0', port=port)
+    start_web_app = lambda: app.run(debug=debug, port=port)
     proc = multiprocessing.Process(target=start_web_app)
     proc.start()
 
