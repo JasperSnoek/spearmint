@@ -38,6 +38,10 @@ Note that you should be able to install protocol-buffers from source without req
 
 		pip install protobuf
 
+	Then from within the spearmint sub-directory run the command:
+
+		bin/make_protobufs
+
 This package has been tested on Ubuntu linux (versions 11.0+) and
 Mac-OSX.
 

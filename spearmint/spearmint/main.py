@@ -115,13 +115,14 @@ def get_available_port():
     return port
 
 
-def start_web_view(options, experiment_config):
+def start_web_view(options, experiment_config, chooser):
     '''Start the web view in a separate process.'''
 
     from spearmint.web.app import app
     port = get_available_port()
     print "Using port: " + str(port)
     app.set_experiment_config(experiment_config)
+    app.set_chooser(chooser)
     debug = (options.verbose == True)
     start_web_app = lambda: app.run(debug=debug, port=port)
     proc = multiprocessing.Process(target=start_web_app)
@@ -142,9 +143,6 @@ def main():
     log("Using experiment configuration: " + experiment_config)
     log("experiment dir: " + expt_dir)
 
-    if options.web_status:
-        web_proc = start_web_view(options, experiment_config)
-
     if not os.path.exists(expt_dir):
         log("Cannot find experiment directory '%s'. "
             "Aborting." % (expt_dir))
@@ -155,6 +153,9 @@ def main():
     # Load up the chooser module.
     module  = importlib.import_module('chooser.' + options.chooser_module)
     chooser = module.init(expt_dir, options.chooser_args)
+
+    if options.web_status:
+        web_proc = start_web_view(options, experiment_config, chooser)
 
     # Load up the job execution driver.
     module = importlib.import_module('driver.' + options.driver)
