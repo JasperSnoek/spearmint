@@ -139,7 +139,7 @@ class GPEIOptChooser:
             self.ls = np.ones(self.D)
 
             # Initial amplitude.
-            self.amp2 = np.std(values)
+            self.amp2 = np.std(values)+1e-4
 
             # Initial observation noise.
             self.noise = 1e-3
