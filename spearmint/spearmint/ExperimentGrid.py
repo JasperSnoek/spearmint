@@ -121,6 +121,10 @@ class ExperimentGrid:
         return self.proc_ids[id]
 
     def add_to_grid(self, candidate):
+        # Checks to prevent numerical over/underflow from corrupting the grid
+        candidate[candidate > 1.0] = 1.0
+        candidate[candidate < 0.0] = 0.0
+
         # Set up the grid
         self.grid   = np.vstack((self.grid, candidate))
         self.status = np.append(self.status, np.zeros(1, dtype=int) +
@@ -262,4 +266,6 @@ class GridMap:
         return self.cardinality
 
     def _index_map(self, u, items):
+        u = np.max((u, 0.0))
+        u = np.min((u, 1.0))
         return int(np.floor((1-np.finfo(float).eps) * u * float(items)))
