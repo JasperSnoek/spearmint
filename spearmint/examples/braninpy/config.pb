@@ -9,6 +9,14 @@ variable {
  max:  1
 }
 
+variable {
+ name: "Y"
+ type: FLOAT
+ size: 2
+ min:  0
+ max:  1
+}
+
 # Integer example
 #
 # variable {

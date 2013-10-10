@@ -122,7 +122,7 @@ def start_web_view(options, experiment_config, chooser):
     port = get_available_port()
     print "Using port: " + str(port)
     app.set_experiment_config(experiment_config)
-    app.set_chooser(chooser)
+    app.set_chooser(options.chooser_module,chooser)
     debug = (options.verbose == True)
     start_web_app = lambda: app.run(debug=debug, port=port)
     proc = multiprocessing.Process(target=start_web_app)

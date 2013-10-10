@@ -1,45 +1,109 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <script type="text/javascript" src="/static/js/jquery-1.8.3.min.js"></script>
-        <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
-        <link rel="stylesheet" type="text/css" href="/static/style.css" />
-        <title>Spearmint - Experiment Monitor</title>
-    </head>
-    <body>
-        <div id='container'>
-            <div id='header'>
-                <h2>Spearmint - Bayesian Optimizer</h2>
-            </div>
-            <div id='content'>
-                <div id='experiment'>
-                    <h3>{{experiment.name}} ({{experiment.language}})</h3>
-                </div>
-                <h4>Status:</h4>
-                <div id='status'></div>
-                <div id='result-chart'></div>
-                <form id="result-options">
-                    Max: <input id='max-score' name="max" type="number" value="100000000" />
-                </form>
-
-                <h4>Parameters:</h4>
-                <div id='parameters'>
-                    {% for param in experiment.params %}
-                    <table class='parameter'>
-                        <tr><td>Name: </td><td>{{ param.name }}</td></tr>
-                        <tr><td>Type: </td><td>{{ param.type }}</td></tr>
-                        <tr><td>Size: </td><td>{{ param.size }}</td></tr>
-                        <tr><td>Min:  </td><td>{{ param.min  }}</td></tr>
-                        <tr><td>Max:  </td><td>{{ param.max  }}</td></tr>
-                    </table>
-                    {% endfor %}
-                </div>
-
-                <div id='footer'></div>
-            </div>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script type="text/javascript" src="/static/js/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript" src="/static/js/d3.v3.min.js"></script>
+    <script type="text/javascript" src="/static/js/spearmint.js"></script>
+    <script type="text/javascript" src="/static/js/bootstrap-modal.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/style.css" />
+    <title>Spearmint - Experiment Monitor</title>
+    
+    <link href="/static/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+        padding-bottom: 60px;
+      }
+    </style>
+    <link href="/static/bootstrap-responsive.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/">Spearmint - Bayesian Optimization</a>
+          <div class="nav-collapse collapse">
+	    <img src="/static/spearmint_leaf_sm.png" class="leaficon"/></span>
+            <!--<ul class="nav">
+              <!--<li><a href="status.html">Status</a></li>
+            </ul>-->
+          </div><!--/.nav-collapse -->
         </div>
+      </div>
     </div>
 
-    <script type="text/javascript" src="/static/js/spearmint.js"></script>
+    <div class='container' id='container'>
+      <div class="row">
+        <!--<div id='content'>-->
+	  <div class="span12">
+            <div id='experiment'>
+	      <h3>{{experiment.name}} ({{experiment.language}})</h3>
+            </div>
+	  </div>
+	  <div class="span7">
+            <h3>Status:</h3>
+            <div id='status'></div>
+	  </div>
+	  <div class="span5">
+            <div id='result-chart'>
+	      <div class="progress progress-striped active">
+		<div class="bar" style="width: 100%;"></div>
+	      </div>
+	      LOADING...
+              <form id="result-options">
+		<!--Max: <input id='max-score' name="max" type="number" value="100000000" />-->
+              </form>
+	    </div>
+	  </div>
+         <!--</div>-->
+      </div><!--row-->
+      <div class="row">
+	<div class="span12">
+	  <div id="completed_experiments">
+	  </div>
+	</div>
+      </div>
+      <!--</div>-->
+      <div class="row">
+	<div class="span12">
+	  <div id="params">
+            <h4>Parameters:</h4>
+            <div id='parameters'>
+              {% for param in experiment.params %}
+              <table class='parameter'>
+                <tr><td>Name: </td><td>{{ param.name }}</td></tr>
+                <tr><td>Type: </td><td>{{ param.type }}</td></tr>
+                <tr><td>Size: </td><td>{{ param.size }}</td></tr>
+                <tr><td>Min:  </td><td>{{ param.min  }}</td></tr>
+                <tr><td>Max:  </td><td>{{ param.max  }}</td></tr>
+              </table>
+              {% endfor %}
+            </div>
+            <div id='footer'></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <!--<script src="/static/index_files/bootstrap-transition.js"></script>
+    <script src="/static/index_files/bootstrap-alert.js"></script>    
+    <script src="/static/index_files/bootstrap-dropdown.js"></script>
+    <script src="/static/index_files/bootstrap-scrollspy.js"></script>
+    <script src="/static/index_files/bootstrap-tab.js"></script>
+    <script src="/static/index_files/bootstrap-tooltip.js"></script>
+    <script src="/static/index_files/bootstrap-popover.js"></script>
+    <script src="/static/index_files/bootstrap-button.js"></script>
+    <script src="/static/index_files/bootstrap-collapse.js"></script>
+    <script src="/static/index_files/bootstrap-carousel.js"></script>
+    <script src="/static/index_files/bootstrap-typeahead.js"></script>-->
 </body>
 </html>

@@ -75,18 +75,19 @@ class GPEIOptChooser:
 
         self.noise_scale = 0.1  # horseshoe prior
         self.amp2_scale  = 1    # zero-mean log normal prior
-        self.max_ls      = 10    # top-hat prior on length scales
+        self.max_ls      = 2    # top-hat prior on length scales
 
     def dump_hypers(self):
         self.locker.lock_wait(self.state_pkl)
 
         # Write the hyperparameters out to a Pickle.
         fh = tempfile.NamedTemporaryFile(mode='w', delete=False)
-        cPickle.dump({ 'dims'   : self.D,
-                       'ls'     : self.ls,
-                       'amp2'   : self.amp2,
-                       'noise'  : self.noise,
-                       'mean'   : self.mean },
+        cPickle.dump({ 'dims'          : self.D,
+                       'ls'            : self.ls,
+                       'amp2'          : self.amp2,
+                       'noise'         : self.noise,
+                       'hyper_samples' : self.hyper_samples,
+                       'mean'          : self.mean },
                      fh)
         fh.close()
 
@@ -114,6 +115,48 @@ class GPEIOptChooser:
         fh.write('\n')
         fh.close()
 
+    # This passes out html or javascript to display interesting
+    # stats - such as the length scales (sensitivity to various
+    # dimensions).
+    def generate_stats_html(self):
+        # Need this because the model may not necessarily be
+        # initialized when this code is called.
+        if not self._read_only():
+            return 'Chooser not yet ready to display output'
+
+        mean_ls = np.mean(np.vstack([h[3][np.newaxis,:] for h in self.hyper_samples]),0)
+        try:
+            output = (
+                '<div id=\"lschart\">' +
+                '<span class=\"label label-info\">Inverse parameter sensitivity' +
+                ' - Gaussian Process length scales</span><br />' +
+                '</div><script type=\"text/javascript\">var data = [' +
+                ','.join(['%.2f' % i for i in mean_ls]) + '];')
+        except:
+            return 'Chooser not yet ready to display output.'
+
+        output += ('bar_chart("#lschart", data, ' + str(self.max_ls) + ');' +
+                   '</script>')
+        return output
+
+    # Read in the chooser from file. Returns True only on success
+    def _read_only(self):
+        if os.path.exists(self.state_pkl):
+            fh    = open(self.state_pkl, 'r')
+            state = cPickle.load(fh)
+            fh.close()
+
+            self.D             = state['dims']
+            self.ls            = state['ls']
+            self.amp2          = state['amp2']
+            self.noise         = state['noise']
+            self.mean          = state['mean']
+            self.hyper_samples = state['hyper_samples']
+            self.needs_burnin  = False
+            return True
+
+        return False
+
     def _real_init(self, dims, values):
         self.locker.lock_wait(self.state_pkl)
 
@@ -123,13 +166,13 @@ class GPEIOptChooser:
             state = cPickle.load(fh)
             fh.close()
 
-            self.D     = state['dims']
-            self.ls    = state['ls']
-            self.amp2  = state['amp2']
-            self.noise = state['noise']
-            self.mean  = state['mean']
-
-            self.needs_burnin = False
+            self.D             = state['dims']
+            self.ls            = state['ls']
+            self.amp2          = state['amp2']
+            self.noise         = state['noise']
+            self.mean          = state['mean']
+            self.hyper_samples = state['hyper_samples']
+            self.needs_burnin  = False
         else:
 
             # Input dimensionality.

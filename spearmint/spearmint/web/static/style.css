@@ -9,17 +9,6 @@ body, html{
     height:100%;
 }
 
-#container {
-    height: 100%;
-    min-height: 100%;
-    border: 1px solid rgb(80, 80, 80);
-    width: 900px;
-    margin: 0;
-    margin-left: auto;
-    margin-right: auto;
-    background-color: white;
-}
-
 #header {
     padding: 5px;
     padding-left: 20px;
@@ -47,8 +36,26 @@ body, html{
     clear: both;
 }
 
+.leaficon {
+  width:17px;
+  height:auto;
+  padding-top:8px;
+}
 
 /* SVG styling for the charts */
+.chart div {
+   font: 10px sans-serif;
+   background-color: steelblue;
+   text-align: right;
+   padding: 3px;
+   margin: 1px;
+   color: white;
+}
+
+.chart rect {
+   stroke: white;
+   fill: steelblue;
+}
 
 path {
     stroke: steelblue;

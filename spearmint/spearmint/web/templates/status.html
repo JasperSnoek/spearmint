@@ -5,9 +5,26 @@
     <div>Broken:        {{ stats.broken      }}</div>
     <div>Minimum Value: {{ stats.best        }}</div>
     <div>Best Params:   {{ stats.bestparams }}</div>
+    <br />
+</div>
+{{ stats.chooseroutput }}
+
+<div id='all-results'><br /><span class="label label-info">Experiments Completed</span>
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th>Job ID#</th>
+      <th>Score</th>
+      <th>Parameters</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ stats.allresults }}
+  </tbody>
+</table>
 </div>
 
-<script>
+<script type="text/javascript">
     var y_data = {{ stats.scores }};
     console.log(y_data);
     var max_y = d3.min([max_score, d3.max(y_data)]);

@@ -26,6 +26,10 @@ function line_chart(height, width, margin, y_data) {
         .x(function(d,i) { return x(i); })
         .y(function(d) { return -1 * y(d); });
 
+    var yAxis = d3.svg.axis()
+	.scale(y)
+	.orient("left");
+
     g.append("svg:path").attr("d", line(y_data));
 
     g.append("svg:line")
@@ -73,9 +77,19 @@ function line_chart(height, width, margin, y_data) {
         .enter().append("svg:line")
         .attr("class", "yTicks")
         .attr("y1", function(d) { return -1 * y(d); })
-        .attr("x1", x(-0.3))
+        .attr("x1", x(-0.2))
         .attr("y2", function(d) { return -1 * y(d); })
         .attr("x2", x(0));
+
+    svg.append("g")
+	.attr("class", "y axis")
+	.call(yAxis)
+	.append("text")
+	.attr("transform", "rotate(-90)")
+	.attr("y", 2)
+	.attr("dy", ".71em")
+	.style("text-anchor", "end")
+	.text("Temperature (ºF)");
 
     /*
        svg.append("text")
@@ -86,6 +100,64 @@ function line_chart(height, width, margin, y_data) {
        */
 }
 
+function bar_chart(div_id, data, maxval) {
+    var x = d3.scale.linear()
+       .domain([0, maxval])
+       .range(["0px", "420px"]);
+
+    var y = d3.scale.ordinal()
+       .domain(data)
+       .rangeBands([0, 120]);
+    var chart = d3.select(div_id).append("svg")
+      .attr("class", "chart")
+      .attr("width", 440)
+      .attr("height", 140)
+      .style("margin-left", "32px") // Tweak alignment…
+      .append("g")
+      .attr("transform", "translate(10,15)");
+
+  chart.selectAll("line")
+      .data(x.ticks(10))
+      .enter().append("line")
+      .attr("x1", x)
+      .attr("x2", x)
+      .attr("y1", 0)
+      .attr("y2", 120)
+      .style("stroke", "#ccc");
+
+  chart.selectAll(".rule")
+      .data(x.ticks(5))
+      .enter().append("text")
+      .attr("class", "rule")
+      .attr("x", x)
+      .attr("y", 0)
+      .attr("dy", -3)
+      .attr("text-anchor", "middle")
+      .text(String);
+
+  chart.selectAll("rect")
+      .data(data)
+      .enter().append("rect")
+      .attr("y", y)
+      .attr("width", x)
+      .attr("height", y.rangeBand());
+
+  chart.selectAll(".bar")
+      .data(data)
+      .enter().append("text")
+      .attr("class", "bar")
+      .attr("x", x)
+      .attr("y", function(d) { return y(d) + y.rangeBand() / 2; })
+      .attr("dx", -3)
+      .attr("dy", ".35em")
+      .attr("text-anchor", "end")
+      .text(String);
+
+  chart.append("line")
+      .attr("y1", 0)
+      .attr("y2", 120)
+      .style("stroke", "#000");
+}
 var REFRESH_RATE = 2000;
 var width = 400;
 var height = 200;

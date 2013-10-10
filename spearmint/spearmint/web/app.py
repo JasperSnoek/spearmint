@@ -2,7 +2,8 @@ import os
 import sys
 import json
 import numpy as np
-from flask import Flask, render_template, redirect, url_for
+import importlib
+from flask import Flask, render_template, redirect, url_for, Markup
 
 from spearmint.ExperimentGrid import ExperimentGrid
 from spearmint.helpers import load_experiment
@@ -13,8 +14,9 @@ class SpearmintWebApp(Flask):
         self.experiment_config = expt_config
         self.experiment_dir = os.path.dirname(os.path.realpath(expt_config))
 
-    def set_chooser(self, chooser):
-        self.chooser_module = chooser
+    def set_chooser(self, chooser_module, chooser):
+        module  = importlib.import_module('chooser.' + chooser_module)
+        self.chooser = chooser
 
     def experiment_grid(self):
         return ExperimentGrid(self.experiment_dir)
@@ -42,28 +44,52 @@ def status():
         (best_val, best_job) = grid.get_best()
         best_params = list()
         for p in grid.get_params(best_job):
-            best_params.append(p.name + ':')
+            best_params.append('<br />' + p.name + ':')
             if p.int_val:
                 best_params[-1] += np.array_str(np.array(p.int_val))
             if p.dbl_val:
                 best_params[-1] += np.array_str(np.array(p.dbl_val))
-        best_params = ','.join(best_params).encode('ascii')
+            if p.str_val:
+                best_params[-1] += np.array_str(np.array(p.str_val))
+        dims = len(best_params)
+        best_params = Markup(','.join(best_params).encode('ascii'))
 
-#             for val in p.int_val:
-#                 best_params += str(val) + ','
-#             for val in p.dbl_val:
-#                 best_params += str(val) + ','
-#            best_params += '], '
+        # Pump out all experiments (parameter sets) run so far
+        all_params = list()
+        for job,score in zip(job_ids, scores):
+            all_params.append('<tr><td>' + str(job) + '</td>' +
+                              '<td>' + str(score) + '</td><td>')
+            sub_params = list()
+            for p in grid.get_params(job):
+                sub_params.append(p.name + ':')
+                if p.int_val:
+                    sub_params[-1] += np.array_str(np.array(p.int_val))
+                if p.dbl_val:
+                    sub_params[-1] += np.array_str(np.array(p.dbl_val))
+                if p.str_val:
+                    sub_params[-1] += np.array_str(np.array(p.str_val))
+            all_params.append(',<br />'.join(sub_params).encode('ascii') +
+                              '</td></tr>')
+        all_params = Markup(' '.join(all_params))
 
-        #best_params = [' '.join((p.name, str(p.dbl_val), str(p.int_val))) for p in grid.get_params(best_job)]
+        # If the chooser has a function generate_stats_html, then this
+        # will be fed into the web display (as raw html).  This is handy
+        # for visualizing things pertaining to the actual underlying statistic
+        # model - e.g. for sensitivity analysis.
+        try:
+            chooseroutput = Markup(app.chooser.generate_stats_html())
+        except:
+            chooseroutput = ''
         stats  = {
-            'candidates':  grid.get_candidates().size,
-            'pending':     grid.get_pending().size,
-            'completed':   grid.get_complete().size,
-            'broken':      grid.get_broken().size,
-            'scores':      json.dumps(scores),
-            'best'  :      best_val,
-            'bestparams' : best_params,
+            'candidates'    : grid.get_candidates().size,
+            'pending'       : grid.get_pending().size,
+            'completed'     : grid.get_complete().size,
+            'broken'        : grid.get_broken().size,
+            'scores'        : json.dumps(scores),
+            'best'          : best_val,
+            'bestparams'    : best_params,
+            'chooseroutput' : chooseroutput,
+            'allresults'    : all_params,
         }
         return render_template('status.html', stats=stats)
     finally:
@@ -71,13 +97,8 @@ def status():
         if grid:
             del grid
 
-
 @app.route("/")
 def home():
-    #grid = app.experiment_grid()
-    #job_ids, scores = app.experiment_results(grid)
-    #(best_val, best_job) = grid.get_best()    
-    #best_params = grid.get_params(best_job)
     exp = app.experiment()
     params = []
     for p in exp.variable:
@@ -93,7 +114,7 @@ def home():
     ex = {
         'name': exp.name,
         'language': _LANGUAGE.values_by_number[exp.language].name,
-        'params': params
+        'params': params,
         }
     return render_template('home.html', experiment=ex)
 
