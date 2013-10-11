@@ -127,11 +127,10 @@ class GPEIOptChooser:
         mean_ls = np.mean(np.vstack([h[3][np.newaxis,:] for h in self.hyper_samples]),0)
         try:
             output = (
-                '<div id=\"lschart\">' +
                 '<span class=\"label label-info\">Inverse parameter sensitivity' +
-                ' - Gaussian Process length scales</span><br />' +
-                '</div><script type=\"text/javascript\">var data = [' +
-                ','.join(['%.2f' % i for i in mean_ls]) + '];')
+                ' - Gaussian Process length scales</span><br /><br />' +
+                '<div id=\"lschart\"></div><script type=\"text/javascript\">' +
+                'var data = [' + ','.join(['%.2f' % i for i in mean_ls]) + '];')
         except:
             return 'Chooser not yet ready to display output.'
 
@@ -272,7 +271,6 @@ class GPEIOptChooser:
             #                            cand2[i,:].flatten(), args=(comp,pend,vals),
             #                            bounds=b, disp=0)
             #    cand2[i,:] = ret[0]
-
             #cand = np.vstack((cand, cand2))
 
             # Optimize each point in parallel

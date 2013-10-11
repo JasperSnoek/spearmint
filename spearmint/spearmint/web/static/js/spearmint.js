@@ -107,11 +107,11 @@ function bar_chart(div_id, data, maxval) {
 
     var y = d3.scale.ordinal()
        .domain(data)
-       .rangeBands([0, 120]);
+       .rangeBands([0, 30*data.length]);
     var chart = d3.select(div_id).append("svg")
       .attr("class", "chart")
       .attr("width", 440)
-      .attr("height", 140)
+      .attr("height", 33*data.length)
       .style("margin-left", "32px") // Tweak alignment…
       .append("g")
       .attr("transform", "translate(10,15)");
@@ -122,7 +122,7 @@ function bar_chart(div_id, data, maxval) {
       .attr("x1", x)
       .attr("x2", x)
       .attr("y1", 0)
-      .attr("y2", 120)
+      .attr("y2", 30*data.length)
       .style("stroke", "#ccc");
 
   chart.selectAll(".rule")
@@ -155,7 +155,7 @@ function bar_chart(div_id, data, maxval) {
 
   chart.append("line")
       .attr("y1", 0)
-      .attr("y2", 120)
+      .attr("y2", 30*data.length)
       .style("stroke", "#000");
 }
 var REFRESH_RATE = 2000;
