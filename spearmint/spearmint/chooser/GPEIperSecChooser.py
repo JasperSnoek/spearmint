@@ -129,8 +129,8 @@ class GPEIperSecChooser:
             self.time_ls = np.ones(self.D)
 
             # Initial amplitude.
-            self.amp2 = np.std(values)
-            self.time_amp2 = np.std(durations)
+            self.amp2 = np.std(values)+1e-4
+            self.time_amp2 = np.std(durations)+1e-4
 
             # Initial observation noise.
             self.noise = 1e-3

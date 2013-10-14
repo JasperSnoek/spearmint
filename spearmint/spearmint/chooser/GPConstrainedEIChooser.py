@@ -176,8 +176,8 @@ class GPConstrainedEIChooser:
             self.constraint_ls = np.ones(self.D)
 
             # Initial amplitude.
-            self.amp2 = np.std(values[goodvals])
-            self.constraint_amp2 = 1#np.std(durations)
+            self.amp2 = np.std(values[goodvals])+1e-4
+            self.constraint_amp2 = 1.0
 
             # Initial observation noise.
             self.noise = 1e-3
