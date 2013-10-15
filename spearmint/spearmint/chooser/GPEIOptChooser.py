@@ -124,17 +124,22 @@ class GPEIOptChooser:
         if not self._read_only():
             return 'Chooser not yet ready to display output'
 
-        mean_ls = np.mean(np.vstack([h[3][np.newaxis,:] for h in self.hyper_samples]),0)
+        mean_mean  = np.mean(np.vstack([h[0] for h in self.hyper_samples]))
+        mean_noise = np.mean(np.vstack([h[1] for h in self.hyper_samples]))
+        mean_ls    = np.mean(np.vstack([h[3][np.newaxis,:] for h in self.hyper_samples]),0)
+
         try:
             output = (
-                '<span class=\"label label-info\">Inverse parameter sensitivity' +
+                '<br /><span class=\"label label-info\">Estimated mean:</span> ' + str(mean_mean) + 
+                '<br /><span class=\"label label-info\">Estimated noise:</span> ' + str(mean_noise) + 
+                '<br /><br /><span class=\"label label-info\">Inverse parameter sensitivity' +
                 ' - Gaussian Process length scales</span><br /><br />' +
                 '<div id=\"lschart\"></div><script type=\"text/javascript\">' +
-                'var data = [' + ','.join(['%.2f' % i for i in mean_ls]) + '];')
+                'var lsdata = [' + ','.join(['%.2f' % i for i in mean_ls]) + '];')
         except:
             return 'Chooser not yet ready to display output.'
 
-        output += ('bar_chart("#lschart", data, ' + str(self.max_ls) + ');' +
+        output += ('bar_chart("#lschart", lsdata, ' + str(self.max_ls) + ');' +
                    '</script>')
         return output
 
