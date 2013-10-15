@@ -93,8 +93,11 @@ def parse_args():
                       help="The time in-between successive polls for results.",
                       type="float", default=3.0)
     parser.add_option("-w", "--web-status", action="store_true",
-                     help="Serve an experiment status web page.",
+                      help="Serve an experiment status web page.",
                       dest="web_status")
+    parser.add_option("--port",
+                      help="Specify a port to use for the status web interface.",
+                      dest="web_status_port", type="int", default=0)
     parser.add_option("-v", "--verbose", action="store_true",
                       help="Print verbose debug output.")
 
@@ -107,9 +110,9 @@ def parse_args():
     return options, args
 
 
-def get_available_port():
+def get_available_port(portnum):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('localhost', 0))
+    sock.bind(('localhost', portnum))
     port = sock.getsockname()[1]
     sock.close()
     return port
@@ -118,8 +121,8 @@ def get_available_port():
 def start_web_view(options, experiment_config, chooser):
     '''Start the web view in a separate process.'''
 
-    from spearmint.web.app import app
-    port = get_available_port()
+    from spearmint.web.app import app    
+    port = get_available_port(options.web_status_port)
     print "Using port: " + str(port)
     app.set_experiment_config(experiment_config)
     app.set_chooser(options.chooser_module,chooser)
