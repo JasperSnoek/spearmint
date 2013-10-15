@@ -180,6 +180,10 @@ well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/c
 
 Using the `--driver=local` flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
 
+### Web Status Page
+Running spearmint with the flag `-w` will spawn a local web server that will display useful info and statistics about your optimization run in a much more interpretable and intuitive interface than the command line.  Spearmint will provide a link to the status page that you can simply paste into a browser window.
+
+
 Running the basic code: Spearmint-lite 
 ---------------------------------------
 
