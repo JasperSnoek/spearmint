@@ -27,10 +27,6 @@ import scipy.linalg as spla
 import scipy.optimize as spo
 import scipy.io as sio
 import scipy.weave
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass
     
 SQRT_3 = np.sqrt(3.0)
 SQRT_5 = np.sqrt(5.0)
@@ -296,6 +292,11 @@ class GP:
         self.ls    = np.exp(hypers[2:])
 
 def main():
+    try:
+        import matplotlib.pyplot as plt
+    except:
+        pass
+
     # Let's start with some random values
     x = np.linspace(0,1,10)[:,np.newaxis]*10#np.random.rand(100)[:,np.newaxis]
     y = np.random.randn(10)
