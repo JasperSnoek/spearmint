@@ -49,6 +49,7 @@ def job_runner(job):
         log("-" * 40)
         log("Problem running the job:")
         log(sys.exc_info())
+        log(traceback.print_exc(limit=1000))
         log("-" * 40)
 
     end_time = time.time()
