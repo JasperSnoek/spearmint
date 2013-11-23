@@ -34,9 +34,9 @@ Note that you should be able to install protocol-buffers from source without req
 
 		apt-get install python-protobuf
 						
-	and on Mac with:
+	and on Mac (if you use homebrew) with:
 
-		pip install protobuf
+		brew install protobuf
 
 	Then from within the spearmint sub-directory run the command:
 
