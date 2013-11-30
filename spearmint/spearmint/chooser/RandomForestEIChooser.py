@@ -3,7 +3,7 @@ import numpy.random as npr
 import scipy.stats  as sps
 import sklearn.ensemble
 import sklearn.ensemble.forest
-import util
+from spearmint import util
 
 from sklearn.externals.joblib import Parallel, delayed
 

@@ -22,7 +22,7 @@
 import os
 import gp
 import sys
-import util
+from spearmint import util
 import tempfile
 import numpy          as np
 import math
