@@ -13,7 +13,7 @@ name 'spearmint') in a manner that iteratively adjusts a number of
 parameters so as to minimize some objective in as few runs as
 possible.
 
-Soon you'll be able to do your optimization in the cloud with a more powerful, accessible and scalable tool.  Sign up for the private beta at www.whetlab.com
+**Soon you'll be able to do your optimization in the cloud with a more powerful, accessible and scalable tool.  Sign up for the private beta at www.whetlab.com**
 
 Dependencies
 ------------
