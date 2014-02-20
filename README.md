@@ -15,6 +15,8 @@ possible.
 
 **Soon you'll be able to do your optimization in the cloud with a more powerful, accessible and scalable tool.  Sign up for the private beta at www.whetlab.com**
 
+Spearmint is the result of a collaboration primarily between machine learning researchers at [Harvard University](https://hips.seas.harvard.edu/) and the [University of Toronto](http://learning.cs.toronto.edu/).
+
 Dependencies
 ------------
 This package requires:
