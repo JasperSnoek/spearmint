@@ -29,30 +29,27 @@ class RandomForestEIChooser:
 
     def __init__(self,n_trees=50,
                  max_depth=None,
-                 min_split=1,
+                 min_samples_split=1,
                  max_monkeys=7,
-                 min_density=0.1,
                  max_features="auto",
                  n_jobs=1,
                  random_state=None):
         self.n_trees = float(n_trees)
         self.max_depth = max_depth
-        self.min_split = min_split
-        self.min_density = min_density
+        self.min_samples_split = min_samples_split
         self.max_features = max_features
         self.n_jobs = float(n_jobs)
         self.random_state = random_state
-        self.rf = RandomForestRegressorWithVariance(n_estimators=n_trees, 
+        self.rf = RandomForestRegressorWithVariance(n_estimators=n_trees,
                                                     max_depth=max_depth,
-                                                    min_split=min_split,
-                                                    min_density=min_density,
+                                                    min_samples_split=min_samples_split,
                                                     max_features=max_features,
                                                     n_jobs=n_jobs,
                                                     random_state=random_state)
-        
+
     def next(self, grid, values, durations,
              candidates, pending, complete):
-                # Grab out the relevant sets.
+        # Grab out the relevant sets.
 
         # Don't bother using fancy RF stuff at first.
         if complete.shape[0] < 2:
@@ -70,11 +67,11 @@ class RandomForestEIChooser:
             # Generate fantasies for pending
             func_m, func_v = self.rf.predict(pend)
             vals_pend = func_m + np.sqrt(func_v) + npr.randn(func_m.shape[0])
-            
+
             # Re-fit using fantasies
-            self.rf.fit(np.vstack[comp,pend],np.hstack[vals,vals_pend])            
-            
-        # Predict the marginal means and variances at candidates.
+            self.rf.fit(np.vstack[comp,pend],np.hstack[vals,vals_pend])
+
+            # Predict the marginal means and variances at candidates.
         func_m, func_v = self.rf.predict(cand)
 
         # Current best.
@@ -86,7 +83,7 @@ class RandomForestEIChooser:
         ncdf   = sps.norm.cdf(u)
         npdf   = sps.norm.pdf(u)
         ei     = func_s*( u*ncdf + npdf)
-        
+
         best_cand = np.argmax(ei)
         ei.sort()
 
