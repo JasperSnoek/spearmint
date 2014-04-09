@@ -182,7 +182,7 @@ class ExperimentGrid:
                        'status' : self.status,
                        'values' : self.values,
                        'durs'   : self.durs,
-                       'proc_ids' : self.proc_ids }, fh)
+                       'proc_ids' : self.proc_ids }, fh, protocol=-1)
         fh.close()
 
         # Use an atomic move for better NFS happiness.
