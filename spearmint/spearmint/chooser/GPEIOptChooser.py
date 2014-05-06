@@ -657,7 +657,7 @@ class GPEIOptChooser:
             lp += np.log(np.log(1 + (self.noise_scale/noise)**2))
 
             # Roll in amplitude lognormal prior
-            lp -= 0.5*(np.log(amp2)/self.amp2_scale)**2
+            lp -= 0.5*(np.log(np.sqrt(amp2))/self.amp2_scale)**2
 
             return lp
 
@@ -687,7 +687,7 @@ class GPEIOptChooser:
             lp    = -np.sum(np.log(np.diag(chol)))-0.5*np.dot(vals-mean, solve)
 
             # Roll in amplitude lognormal prior
-            lp -= 0.5*(np.log(amp2)/self.amp2_scale)**2
+            lp -= 0.5*(np.log(np.sqrt(amp2))/self.amp2_scale)**2
 
             return lp
 
