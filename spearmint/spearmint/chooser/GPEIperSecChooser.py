@@ -297,7 +297,7 @@ class GPEIperSecChooser:
             self.time_ls = time_hyper[3]
 
             overall_ei[:,mcmc_iter] = self.compute_ei_per_s(comp, pend, cand,
-                                                            vals, durs)
+                                                            vals, durs.squeeze())
 
             return overall_ei
 
@@ -555,8 +555,8 @@ class GPEIperSecChooser:
             self._sample_noisy(comp, vals)
         self._sample_ls(comp, vals)
 
-        self._sample_time_noisy(comp, durs)
-        self._sample_time_ls(comp, durs)
+        self._sample_time_noisy(comp, durs.squeeze())
+        self._sample_time_ls(comp, durs.squeeze())
 
         self.hyper_samples.append((self.mean, self.noise, self.amp2, self.ls))
         self.time_hyper_samples.append((self.time_mean, self.time_noise, self.time_amp2,
@@ -643,7 +643,7 @@ class GPEIperSecChooser:
             #lp -= 0.5*(np.log(noise)/self.time_noise_scale)**2
 
             # Roll in amplitude lognormal prior
-            lp -= 0.5*(np.log(amp2)/self.time_amp2_scale)**2
+            lp -= 0.5*(np.log(np.sqrt(amp2))/self.time_amp2_scale)**2
 
             return lp
 
