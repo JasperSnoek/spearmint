@@ -56,7 +56,7 @@ class GPEIOptChooser:
 
     def __init__(self, expt_dir, covar="Matern52", mcmc_iters=10,
                  pending_samples=100, noiseless=False, burnin=100,
-                 grid_subset=20):
+                 grid_subset=20, use_multiprocessing=True):
         self.cov_func        = getattr(gp, covar)
         self.locker          = Locker()
         self.state_pkl       = os.path.join(expt_dir, self.__module__ + ".pkl")
@@ -67,7 +67,7 @@ class GPEIOptChooser:
         self.needs_burnin    = True
         self.pending_samples = int(pending_samples)
         self.D               = -1
-        self.hyper_iters     = 1
+        self.hyper_iters     = 1        
         # Number of points to optimize EI over
         self.grid_subset     = int(grid_subset)
         self.noiseless       = bool(int(noiseless))
@@ -76,6 +76,10 @@ class GPEIOptChooser:
         self.noise_scale = 0.1  # horseshoe prior
         self.amp2_scale  = 1    # zero-mean log normal prior
         self.max_ls      = 2    # top-hat prior on length scales
+
+        # If multiprocessing fails or deadlocks, set this to False
+        self.use_multiprocessing = bool(int(use_multiprocessing))
+
 
     def dump_hypers(self):
         self.locker.lock_wait(self.state_pkl)
@@ -266,25 +270,25 @@ class GPEIOptChooser:
             inds = np.argsort(np.mean(overall_ei,axis=1))[-self.grid_subset:]
             cand2 = cand2[inds,:]
 
-            # This is old code to optimize each point in parallel. Uncomment
-            # and replace if multiprocessing doesn't work
-            #for i in xrange(0, cand2.shape[0]):
-            #    log("Optimizing candidate %d/%d" %
-            #                     (i+1, cand2.shape[0]))
-            #self.check_grad_ei(cand2[i,:].flatten(), comp, pend, vals)
-            #    ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
-            #                            cand2[i,:].flatten(), args=(comp,pend,vals),
-            #                            bounds=b, disp=0)
-            #    cand2[i,:] = ret[0]
-            #cand = np.vstack((cand, cand2))
-
             # Optimize each point in parallel
-            pool = multiprocessing.Pool(self.grid_subset)
-            results = [pool.apply_async(optimize_pt,args=(
-                        c,b,comp,pend,vals,copy.copy(self))) for c in cand2]
-            for res in results:
-                cand = np.vstack((cand, res.get(1e8)))
-            pool.close()
+            if self.use_multiprocessing:
+                pool = multiprocessing.Pool(self.grid_subset)
+                results = [pool.apply_async(optimize_pt,args=(
+                            c,b,comp,pend,vals,copy.copy(self))) for c in cand2]
+                for res in results:
+                    cand = np.vstack((cand, res.get(1e8)))
+                pool.close()
+            else:
+                # This is old code to optimize each point in parallel.
+                for i in xrange(0, cand2.shape[0]):
+                    log("Optimizing candidate %d/%d" %
+                        (i+1, cand2.shape[0]))
+                    #self.check_grad_ei(cand2[i,:].flatten(), comp, pend, vals)
+                    ret = spo.fmin_l_bfgs_b(self.grad_optimize_ei_over_hypers,
+                                            cand2[i,:].flatten(), args=(comp,pend,vals),
+                                            bounds=b, disp=0)
+                    cand2[i,:] = ret[0]
+                cand = np.vstack((cand, cand2))
 
             overall_ei = self.ei_over_hypers(comp,pend,cand,vals)
             best_cand = np.argmax(np.mean(overall_ei, axis=1))
