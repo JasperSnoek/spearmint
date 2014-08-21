@@ -1,3 +1,6 @@
+New code repository!
+As you might have noticed, the development of this repository has been limited to maintenance and bug fixes for some time now.  The reason is that there has been a collaborative effort to overhaul Spearmint into a new codebase.  This includes both algorithmic/theoretical and engineering improvements.  Check it out at https://github.com/HIPS/Spearmint.  Note that the new repository is under a non-commercial license with a contributor license agreement.  If you prefer not to agree to the license, you can freely use code here (though it is a bit older).
+
 Spearmint
 ---------
 
