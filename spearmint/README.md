@@ -1,3 +1,6 @@
+New code repository!
+As you might have noticed, the development of this repository has been limited to maintenance and bug fixes for some time now.  The reason is that there has been a collaborative effort to overhaul Spearmint into a new codebase.  This includes both algorithmic/theoretical and engineering improvements.  Check it out at https://github.com/HIPS/Spearmint.  Note that the new repository is under a non-commercial license with a contributor license agreement.  If you prefer not to agree to the license, you can freely use code here (though it is a bit older).
+
 Spearmint
 ---------
 
@@ -12,6 +15,10 @@ This code is designed to automatically run experiments (thus the code
 name 'spearmint') in a manner that iteratively adjusts a number of
 parameters so as to minimize some objective in as few runs as
 possible.
+
+Spearmint is the result of a collaboration primarily between machine learning researchers at [Harvard University](https://hips.seas.harvard.edu/) and the [University of Toronto](http://learning.cs.toronto.edu/).
+
+**Soon you'll be able to do your optimization in the cloud with a more powerful, accessible and scalable tool.  Sign up for the private beta at www.whetlab.com**
 
 Dependencies
 ------------
@@ -34,9 +41,9 @@ Note that you should be able to install protocol-buffers from source without req
 
 		apt-get install python-protobuf
 						
-	and on Mac with:
+	and on Mac (if you use homebrew) with:
 
-		pip install protobuf
+		brew install protobuf
 
 	Then from within the spearmint sub-directory run the command:
 
