@@ -1,3 +1,6 @@
+New code repository!
+As you might have noticed, the development of this repository has been limited to maintenance and bug fixes for some time now.  The reason is that there has been a collaborative effort to overhaul Spearmint into a new codebase.  This includes both algorithmic/theoretical and engineering improvements.  Check it out at https://github.com/HIPS/Spearmint.  Note that the new repository is under a non-commercial license with a contributor license agreement.  If you prefer not to agree to the license, you can freely use code here (though it is a bit older).
+
 Spearmint
 ---------
 
@@ -12,6 +15,10 @@ This code is designed to automatically run experiments (thus the code
 name 'spearmint') in a manner that iteratively adjusts a number of
 parameters so as to minimize some objective in as few runs as
 possible.
+
+Spearmint is the result of a collaboration primarily between machine learning researchers at [Harvard University](https://hips.seas.harvard.edu/) and the [University of Toronto](http://learning.cs.toronto.edu/).
+
+**Soon you'll be able to do your optimization in the cloud with a more powerful, accessible and scalable tool.  Sign up for the private beta at www.whetlab.com**
 
 Dependencies
 ------------
@@ -34,9 +41,13 @@ Note that you should be able to install protocol-buffers from source without req
 
 		apt-get install python-protobuf
 						
-	and on Mac with:
+	and on Mac (if you use homebrew) with:
 
-		pip install protobuf
+		brew install protobuf
+
+	Then from within the spearmint sub-directory run the command:
+
+		bin/make_protobufs
 
 This package has been tested on Ubuntu linux (versions 11.0+) and
 Mac-OSX.
@@ -175,6 +186,10 @@ Using the `--driver=sge` flag, Spearmint can run on a system with Sun Grid Engin
 well suited to the Amazon EC2 system.  Using [StarCluster](http://star.mit.edu/cluster/) will allow you to set up a large cluster and start distributing experiments within minutes.
 
 Using the `--driver=local` flag will run Spearmint on a single machine with potentially many cores.  This driver simply spawns a new process on the current machine to run a new experiment.  This does not allow you to distribute across multiple machines, however.
+
+### Web Status Page
+Running spearmint with the flag `-w` will spawn a local web server that will display useful info and statistics about your optimization run in a much more interpretable and intuitive interface than the command line.  Spearmint will provide a link to the status page that you can simply paste into a browser window.
+
 
 Running the basic code: Spearmint-lite 
 ---------------------------------------
