@@ -98,6 +98,9 @@ def parse_args():
     parser.add_option("--port",
                       help="Specify a port to use for the status web interface.",
                       dest="web_status_port", type="int", default=0)
+    parser.add_option("--host",
+                      help="Specify a host to use for the status web interface.",
+                      dest="web_status_host", type="string", default=None)
     parser.add_option("-v", "--verbose", action="store_true",
                       help="Print verbose debug output.")
 
@@ -111,6 +114,8 @@ def parse_args():
 
 
 def get_available_port(portnum):
+    if portnum:
+        return portnum
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('localhost', portnum))
     port = sock.getsockname()[1]
@@ -124,10 +129,12 @@ def start_web_view(options, experiment_config, chooser):
     from spearmint.web.app import app    
     port = get_available_port(options.web_status_port)
     print "Using port: " + str(port)
+    if options.web_status_host:
+        print "Listening at: " + str(options.web_status_host)
     app.set_experiment_config(experiment_config)
     app.set_chooser(options.chooser_module,chooser)
     debug = (options.verbose == True)
-    start_web_app = lambda: app.run(debug=debug, port=port)
+    start_web_app = lambda: app.run(debug=debug, port=port, host=options.web_status_host)
     proc = multiprocessing.Process(target=start_web_app)
     proc.start()
 
