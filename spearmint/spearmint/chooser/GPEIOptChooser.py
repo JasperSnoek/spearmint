@@ -508,7 +508,11 @@ class GPEIOptChooser:
             g_ei_s2 = 0.5*npdf / func_s
 
             # Apply covariance function
-            grad_cross = np.squeeze(cand_cross_grad)
+            # Squeeze can break the 1D case be careful
+            if pend.shape[1] == 1:
+                grad_cross = np.squeeze(cand_cross_grad, axis=(2,))
+            else:
+                grad_cross = np.squeeze(cand_cross_grad)
 
             grad_xp_m = np.dot(alpha.transpose(),grad_cross)
             grad_xp_v = np.dot(-2*spla.cho_solve(
